@@ -23,12 +23,26 @@ dk_system_resolvers() {
             getprop "$p" 2>/dev/null
         done
         dumpsys connectivity 2>/dev/null |
-            sed -n 's/.*[Dd]ns[A-Za-z]*: *\[\{0,1\}\([^]]*\)\].*/\1/p' |
+            grep -o 'DnsAddresses: \[[^]]*\]' |
+            sed 's|DnsAddresses: \[||; s|\]||' |
             tr ', ' '\n'
+        dumpsys dnsresolver 2>/dev/null |
+            sed -n '/DNS servers:/,/^ *$/p' |
+            awk '{ print $1 }'
     } 2>/dev/null |
-        sed 's|/.*||' |
-        awk '/^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/ || /^[0-9a-fA-F:]+:[0-9a-fA-F:]+$/ { print }' |
+        sed 's|^/||; s|%.*||; s|/[0-9]*$||' |
+        awk '/^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/ || /^[0-9a-fA-F]*:[0-9a-fA-F:]+$/ { print }' |
         sort -u
+}
+
+dk_dns_verify() {
+    dk_have ping || return 0
+    for _d in android.com connectivitycheck.gstatic.com example.com; do
+        if ping -c1 -w3 "$_d" 2>&1 | grep -q "^PING"; then
+            return 0
+        fi
+    done
+    return 1
 }
 
 dk_dns_gate() {
@@ -187,6 +201,17 @@ $ip
         dk_dns_hook_one "$f" tcp "$DK_CHAIN_T" "$_ports" "$_gate" && _hooked=$((_hooked + 1))
         dk_dns_hook_one "$f" udp "$DK_CHAIN_U" "$_ports" "$_gate" && _hooked=$((_hooked + 1))
     done
+
+    if [ "$doh_strict" = 1 ] && [ "$DK_DNS_RETRY" != 1 ] && ! dk_dns_verify; then
+        dk_log "[!] name resolution stopped working with strict mode on - rolling strict back"
+        dk_cfg_set doh_strict 0
+        doh_strict=0
+        DK_DNS_RETRY=1
+        dk_state_set doh_rollback "$(date '+%Y-%m-%d %H:%M')"
+        dk_dns_apply
+        return $?
+    fi
+    [ "$DK_DNS_RETRY" = 1 ] || dk_state_set doh_rollback ""
 
     dk_state_set doh_active 1
     dk_state_set doh_targets "$_n"

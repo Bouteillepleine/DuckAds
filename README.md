@@ -111,9 +111,11 @@ on the DNS ports:
 * TCP and UDP 443 to ~60 known resolver IPs (Google, Cloudflare, Quad9, AdGuard, NextDNS,
   Mullvad, ControlD, OpenDNS, Yandex, Ali, DNSPod and friends — see `module/data/doh.txt`)
 * port 853 everywhere, for DNS-over-TLS, optional
-* port 53 to those same IPs in strict mode, for apps that hard-code a plain resolver — the
-  resolvers your own network handed you are detected and left alone, so strict mode cannot cut
-  the phone off its own DNS
+* port 53 to those same IPs in strict mode, for apps that hard-code a plain resolver. The
+  resolvers your own network handed you are read out of `dumpsys connectivity` and
+  `dumpsys dnsresolver` and left alone, so strict mode cannot cut the phone off its own DNS —
+  and if name resolution stops working anyway, DuckAds notices, rolls strict back on its own
+  and says so in the log
 
 Add your own endpoints in the **DNS IPs** rule tab. The list-catalog entries *HaGeZi DoH
 bypass* and *DoH + VPN + proxy bypass* cover the name side of the same problem.

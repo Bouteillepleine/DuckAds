@@ -34,3 +34,11 @@
 - the WebUI was slow because every list row and every package spawned its own awk and grep: catalog and app listings are now a single awk pass (Lists 4.2s to 0.09s, Apps 6.5s to 0.15s on an OP15)
 - status assembled without ~40 subshells (1.6s to 0.6s)
 - DNS status skips iptables entirely when blocking is off
+
+## v1.0.4
+
+- FIX: the system-resolver exemption never matched anything. Android prints DNS servers with a leading slash (/41.1.239.252) and the parser stripped from the first slash, leaving an empty list - strict mode could have blocked the resolver a router handed out
+- resolvers are now read from dumpsys connectivity and dumpsys dnsresolver
+- after arming strict mode DuckAds checks that names still resolve, and rolls strict back by itself if they do not
+- All apps leaves out RRO overlays and auto-generated RROs, which are resources rather than apps that resolve names
+- long package names wrap instead of sliding under the toggle
