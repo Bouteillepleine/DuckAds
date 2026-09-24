@@ -70,7 +70,6 @@ dk_build() {
     _ok=0
     _fail=0
     _n=0
-    _allow_n=0
 
     dk_sources_enabled | while IFS= read -r line; do
         _n=$((_n + 1))
@@ -88,6 +87,7 @@ dk_build() {
                 _c=$(wc -l < "$TMP/p/$_n" 2>/dev/null)
                 case "$_c" in ''|*[!0-9]*) _c=0 ;; esac
                 cat "$TMP/p/$_n" >> "$TMP/cand"
+                rm -f "$TMP/p/$_n" 2>/dev/null
                 echo "$id|$_c|ok" >> "$TMP/srcstat"
                 dk_log "    $_c domains"
             fi
@@ -158,7 +158,7 @@ dk_build() {
     cp -f "$TMP/srcstat" "$DATA/sources.stat" 2>/dev/null
     chmod 0600 "$DATA/sources.stat" 2>/dev/null
 
-    _custom=$(grep -cvE '^[ \t]*($|#)' "$DATA/custom.txt" 2>/dev/null)
+    _custom=$(grep -cvE '^[[:space:]]*($|#)' "$DATA/custom.txt" 2>/dev/null)
     case "$_custom" in ''|*[!0-9]*) _custom=0 ;; esac
     _t1=$(date +%s)
     _dur=$((_t1 - _t0))
@@ -186,7 +186,7 @@ dk_compose() {
         echo "::1 localhost"
         echo "127.0.0.1 localhost.localdomain"
         dk_orig_lines
-        grep -vE '^[ \t]*($|#)' "$DATA/custom.txt" 2>/dev/null | sed 's/\r$//'
+        grep -vE '^[[:space:]]*($|#)' "$DATA/custom.txt" 2>/dev/null | sed 's/\r$//'
     } > "$_out"
 
     if [ "$ipv6_sink" = 1 ]; then
@@ -228,7 +228,7 @@ dk_reset_hosts() {
         echo "::1 localhost"
         echo "127.0.0.1 localhost.localdomain"
         dk_orig_lines
-        grep -vE '^[ \t]*($|#)' "$DATA/custom.txt" 2>/dev/null
+        grep -vE '^[[:space:]]*($|#)' "$DATA/custom.txt" 2>/dev/null
         echo "# DuckAds v$(dk_versioncode) reset $(date '+%Y-%m-%d %H:%M')"
     } > "$TMP"
     dk_install_hosts "$TMP"

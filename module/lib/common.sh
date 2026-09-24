@@ -212,7 +212,7 @@ dk_snapshot_orig() {
 dk_orig_lines() {
     [ "$keep_system_hosts" = 1 ] || return 0
     [ -r "$DATA/hosts.orig" ] || return 0
-    grep -vE '^[ 	]*($|#)' "$DATA/hosts.orig" 2>/dev/null |
+    grep -vE '^[[:space:]]*($|#)' "$DATA/hosts.orig" 2>/dev/null |
         grep -v DuckAds |
         grep -vE '^(127\.0\.0\.1|::1)[ 	]+(localhost|localhost\.localdomain)[ 	]*$' |
         sed 's/\r$//'
@@ -247,7 +247,7 @@ dk_json_str() {
 }
 
 dk_tmpdir() {
-    for d in "$DK_ROOT/dev" "$DK_ROOT/data/local/tmp" "$DATA"; do
+    for d in "$DATA" "$DK_ROOT/data/local/tmp" "$DK_ROOT/dev"; do
         [ -d "$d" ] || continue
         if mkdir "$d/.dkprobe.$$" 2>/dev/null; then
             rmdir "$d/.dkprobe.$$" 2>/dev/null
