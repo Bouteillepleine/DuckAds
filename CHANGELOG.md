@@ -46,3 +46,8 @@
 ## v1.0.5
 
 - header theme and refresh buttons are SVG icons at a 44px touch target instead of tiny text glyphs, and the refresh icon spins while it works
+
+## v1.0.6
+
+- the lookup benchmark takes the minimum of 14 samples instead of a mean, so ping's own fork cost cancels out instead of drowning the signal (a 76k-entry file measures a steady 3.9ms, not a noisy 0-10ms)
+- the RRO filter also catches auto_generated_characteristics_rro, .rro.oneplus and .overlay.target, which the suffix-only match let through

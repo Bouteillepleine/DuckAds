@@ -37,18 +37,33 @@ dk_fmt_cms() {
     echo "$_w.$_fr"
 }
 
+dk_now_us() {
+    _n=$(date +%s%N 2>/dev/null)
+    case "$_n" in
+        ''|*[!0-9]*) echo "" ; return 1 ;;
+    esac
+    echo $((_n / 1000))
+}
+
 dk_bench_lookup() {
     _name=$1
-    _runs=${2:-8}
+    _runs=${2:-14}
     dk_have ping || return 1
-    _t0=$(dk_now_ms) || return 1
+    ping -c 1 -w 1 "$_name" > /dev/null 2>&1
+    _min=-1
     _i=0
     while [ "$_i" -lt "$_runs" ]; do
+        _a=$(dk_now_us) || return 1
         ping -c 1 -w 1 "$_name" > /dev/null 2>&1
+        _b=$(dk_now_us) || return 1
+        _d=$((_b - _a))
+        if [ "$_min" -lt 0 ] || [ "$_d" -lt "$_min" ]; then
+            _min=$_d
+        fi
         _i=$((_i + 1))
     done
-    _t1=$(dk_now_ms) || return 1
-    echo $(((_t1 - _t0) * 100 / _runs))
+    [ "$_min" -lt 0 ] && return 1
+    echo $((_min / 10))
 }
 
 dk_bench() {

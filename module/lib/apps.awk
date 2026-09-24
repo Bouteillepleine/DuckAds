@@ -17,8 +17,9 @@ BEGIN {
     if (p == "") next
     if (p !~ /^[A-Za-z0-9._]+$/) next
     if (p !~ /\./) next
-    if (p ~ /\.overlay$/) next
-    if (p ~ /auto_generated_rro/) next
+    if (p ~ /\.overlay/) next
+    if (p ~ /_rro$/ || p ~ /_rro\./) next
+    if (p ~ /\.rro\./ || p ~ /\.rro$/) next
     if (p ~ /^com\.android\.cts\./) next
     if (!first) printf ","
     first = 0
