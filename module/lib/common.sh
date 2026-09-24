@@ -54,6 +54,7 @@ dk_defaults() {
     update_schedule=weekly
     update_cron=
     update_hour=4
+    update_rate_limit=0
     wifi_only=1
     doh_block=0
     doh_strict=0
@@ -71,7 +72,7 @@ dk_load_conf() {
 }
 
 dk_conf_keys() {
-    echo "enabled mode sink ipv6_sink compact max_entries keep_system_hosts update_schedule update_cron update_hour wifi_only doh_block doh_strict doh_dot exempt_enabled notify lists_seeded"
+    echo "enabled mode sink ipv6_sink compact max_entries keep_system_hosts update_schedule update_cron update_hour update_rate_limit wifi_only doh_block doh_strict doh_dot exempt_enabled notify lists_seeded"
 }
 
 dk_cfg_set() {
@@ -162,7 +163,12 @@ dk_nomount_reload() {
 
 dk_susfs_features() {
     [ -x "$SUSFS_BIN" ] || return 1
-    "$SUSFS_BIN" show enabled_features 2>/dev/null
+    if [ -z "$DK_SUSFS_FEAT" ]; then
+        DK_SUSFS_FEAT=$("$SUSFS_BIN" show enabled_features 2>/dev/null)
+        [ -n "$DK_SUSFS_FEAT" ] || DK_SUSFS_FEAT=none
+    fi
+    [ "$DK_SUSFS_FEAT" = none ] && return 1
+    echo "$DK_SUSFS_FEAT"
 }
 
 dk_susfs_has() {

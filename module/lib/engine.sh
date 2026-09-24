@@ -10,6 +10,12 @@ dk_dl_setup() {
     fi
 }
 
+dk_be_nice() {
+    dk_have renice && renice -n 19 -p $$ > /dev/null 2>&1
+    dk_have ionice && ionice -c 3 -p $$ > /dev/null 2>&1
+    return 0
+}
+
 dk_fetch() {
     _url=$1
     _out=$2
@@ -17,9 +23,15 @@ dk_fetch() {
         https://*|http://*) ;;
         *) return 2 ;;
     esac
+    _rate=""
+    case "$update_rate_limit" in
+        ''|0|*[!0-9kKmM]*) ;;
+        *) _rate="--limit-rate $update_rate_limit" ;;
+    esac
     case "$DK_DL" in
         curl)
-            curl -sL --fail --connect-timeout 10 --max-time 180 -A "$DK_UA" -o "$_out" "$_url" 2>/dev/null
+            # shellcheck disable=SC2086
+            curl -sL --fail --connect-timeout 10 --max-time 180 $_rate -A "$DK_UA" -o "$_out" "$_url" 2>/dev/null
             ;;
         wget)
             busybox wget -T 20 --no-check-certificate -U "$DK_UA" -qO "$_out" "$_url" 2>/dev/null
@@ -55,10 +67,13 @@ dk_build() {
         return 1
     fi
 
+    dk_be_nice
     _t0=$(date +%s)
     TMP=$(dk_tmpdir)/duckads.$$
     rm -rf "$TMP" 2>/dev/null
     mkdir -p "$TMP/raw" "$TMP/p" || { dk_log "[x] no writable temp dir"; return 1; }
+    TMPDIR=$TMP
+    export TMPDIR
 
     : > "$TMP/allow.abp"
     : > "$TMP/allow.remote"
@@ -173,6 +188,11 @@ dk_build() {
     dk_state_set last_error ""
 
     rm -rf "$TMP"
+    if [ "$_blocked" -gt 250000 ]; then
+        dk_log "[!] $_blocked entries is a large file for the system resolver to scan on every lookup"
+        [ "$compact" = 1 ] || dk_log "[!] turning compaction on would cut it without losing coverage"
+        dk_log "[!] run 'duckads --bench' to see what it actually costs you"
+    fi
     dk_log "[+] blocked: $_blocked | custom: $_custom | sources: $_ok ok, $_fail failed | ${_dur}s"
     dk_describe
     return 0

@@ -35,11 +35,13 @@ if [ "$KSU" = true ]; then
     ksud kernel notify-module-mounted > /dev/null 2>&1
 fi
 
-(
-    _n=0
-    while [ "$(getprop sys.boot_completed)" != 1 ] && [ "$_n" -lt 180 ]; do
-        sleep 1
-        _n=$((_n + 1))
-    done
-    sh "$MODDIR/boot-completed.sh"
-) &
+if [ "$KSU" != true ] && [ "$APATCH" != true ]; then
+    (
+        _n=0
+        while [ "$(getprop sys.boot_completed)" != 1 ] && [ "$_n" -lt 180 ]; do
+            sleep 2
+            _n=$((_n + 1))
+        done
+        sh "$MODDIR/boot-completed.sh"
+    ) &
+fi

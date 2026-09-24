@@ -132,14 +132,15 @@
   }
   .row:first-of-type { border-top: 0; }
   .row .k { color: var(--muted); flex: 0 0 auto; }
-  .row .v { margin-left: auto; text-align: right; font-weight: 600; word-break: break-word; }
+  .row .v { margin-left: auto; text-align: right; font-weight: 600; flex: 0 0 auto; max-width: 58%; }
+  .row .stack { min-width: 0; }
   .row .v.mono { font-family: var(--mono); font-size: 12px; font-weight: 500; }
   .stack { display: block; }
   .stack .t { font-size: 13.5px; font-weight: 620; }
   .stack .d { font-size: 11.5px; color: var(--faint); margin-top: 2px; line-height: 1.45; }
   .badge {
     display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11px;
-    font-weight: 700; letter-spacing: 0.2px; border: 1px solid var(--brd);
+    font-weight: 700; letter-spacing: 0.2px; border: 1px solid var(--brd); white-space: nowrap;
   }
   .badge.ok   { color: var(--ok);   background: rgba(74,222,128,0.13);  border-color: rgba(74,222,128,0.35); }
   .badge.warn { color: var(--warn); background: rgba(255,200,87,0.13);  border-color: rgba(255,200,87,0.35); }
@@ -418,6 +419,24 @@
       rowTop("Per-app exemptions", esc(s.exempt.label), String(s.exempt.count)) +
       "</div>";
 
+    var b = s.bench || {};
+    var costTxt = "not measured yet";
+    if (b.delta_cms >= 0) costTxt = (b.delta_cms / 100).toFixed(2) + " ms";
+    else if (b.scan_ms >= 0) costTxt = "~" + b.scan_ms + " ms/pass";
+    var costBadge = "dim";
+    if (b.delta_cms >= 0) costBadge = b.delta_cms < 300 ? "ok" : (b.delta_cms < 1000 ? "warn" : "bad");
+    h += '<div class="card">' +
+      "<h2>Speed</h2>" +
+      '<p class="sub">The system resolver reads the hosts file on the way to every name lookup, so the only thing DuckAds can cost you is the length of that file. Measure it rather than guess.</p>' +
+      rowTop("Cost per lookup", b.when ? "measured " + esc(b.when) : "run a measurement to find out",
+        '<span class="badge ' + costBadge + '">' + esc(costTxt) + "</span>") +
+      rowTop("Entries", "after compaction and allowlisting", num(s.blocked)) +
+      rowTop("Blocked names", "answered from the file, no DNS query at all",
+        '<span class="badge ok">faster than resolving</span>') +
+      '<div class="btnrow"><button class="act" id="btnBench">Measure lookup cost</button></div>' +
+      '<div class="hint" id="benchOut"></div>' +
+      "</div>";
+
     h += '<div class="card">' +
       "<h2>Maintenance</h2>" +
       '<p class="sub">Reset drops every blocked domain but keeps your own rules. Rebuild re-runs the whole pipeline from the lists already on disk.</p>' +
@@ -444,6 +463,17 @@
       toast("hosts file reset", "ok");
     };
     $("btnLog").onclick = function () { setTab("settings"); setTimeout(loadLog, 120); };
+    $("btnBench").onclick = async function () {
+      var done = busy(this, "measuring");
+      var out = $("benchOut");
+      out.textContent = "timing name lookups against your own hosts file…";
+      var r = await dkj("--json --bench", 120000);
+      done();
+      if (!r) { out.textContent = "could not measure - needs a built hosts file and ping"; return; }
+      out.textContent = r.verdict || "";
+      STATE = await dkj("--json --status", 90000);
+      renderStatus();
+    };
   }
 
   async function runUpdate() {
@@ -795,6 +825,10 @@
           "</div></div>"
         : "") +
       toggleRow("setWifi", "Wi-Fi only", "Skip a scheduled run when the phone is on mobile data.", st.wifi_only === "1") +
+      '<div class="row"><div class="stack" style="flex:1 1 auto"><div class="t">Download speed cap</div>' +
+      '<div class="d">Keeps a background update from taking the line. 0 is uncapped; try 500k if you notice it.</div>' +
+      '<div style="margin-top:8px"><input type="text" id="setRate" value="' + esc(st.update_rate_limit || "0") + '" /></div>' +
+      "</div></div>" +
       '<div class="hint">Active job: ' + esc(s.schedule_expr || "none") + (s.crond ? " · crond is running" : "") + "</div>" +
       "</div>";
 
@@ -811,7 +845,12 @@
         esc(s.doh.private_dns || "unknown") +
         (s.doh.private_dns && s.doh.private_dns !== "off"
           ? ' <button class="act small" id="btnPdns" style="margin-left:8px">turn off</button>' : "")) +
-      '<div class="hint">Rules live in the <span class="muted">duckads</span> chain. Android re-writes its own chains on a network change, so DuckAds re-arms on boot and after every update.</div>' +
+      rowTop("Packet cost", s.doh.gate === "none"
+        ? "this kernel has no conntrack match, so the rules are checked on every packet"
+        : "rules are checked once per new connection, never on the data that follows",
+        s.doh.gate === "none" ? '<span class="badge warn">per packet</span>'
+          : '<span class="badge ok">' + esc(s.doh.gate || "per connection") + "</span>") +
+      '<div class="hint">Rules live in the <span class="muted">duckads_t</span> and <span class="muted">duckads_u</span> chains, entered only for new connections on the DNS ports, so a download never walks them. Android re-writes its own chains on a network change, so DuckAds re-arms on boot and after every update.</div>' +
       "</div>";
 
     h += '<div class="card">' +
@@ -835,6 +874,7 @@
     bindSetting("setMax", "max_entries", "value");
     bindSetting("setMode", "mode", "mode");
     bindSetting("setHour", "update_hour", "value");
+    bindSetting("setRate", "update_rate_limit", "value");
     bindSetting("setIpv6", "ipv6_sink", "check");
     bindSetting("setCompact", "compact", "check");
     bindSetting("setKeep", "keep_system_hosts", "check");

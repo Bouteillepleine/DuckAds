@@ -105,18 +105,63 @@ reboot.
 
 A hosts file only binds apps that ask Android to resolve a name. An app that speaks DoH to a
 hard-coded `1.1.1.1` never asks. Turn on **Block encrypted-DNS endpoints** and DuckAds builds
-a `duckads` chain in iptables and ip6tables:
+`duckads_t` and `duckads_u` chains in iptables and ip6tables, entered only for new connections
+on the DNS ports:
 
 * TCP and UDP 443 to ~60 known resolver IPs (Google, Cloudflare, Quad9, AdGuard, NextDNS,
   Mullvad, ControlD, OpenDNS, Yandex, Ali, DNSPod and friends — see `module/data/doh.txt`)
 * port 853 everywhere, for DNS-over-TLS, optional
-* port 53 to those same IPs in strict mode, for apps that hard-code a plain resolver
+* port 53 to those same IPs in strict mode, for apps that hard-code a plain resolver — the
+  resolvers your own network handed you are detected and left alone, so strict mode cannot cut
+  the phone off its own DNS
 
 Add your own endpoints in the **DNS IPs** rule tab. The list-catalog entries *HaGeZi DoH
 bypass* and *DoH + VPN + proxy bypass* cover the name side of the same problem.
 
 Android's own **Private DNS** setting overrides the hosts file for every app on the device.
 DuckAds reports it on the Settings tab and offers to switch it off.
+
+## Performance
+
+A hosts blocker can slow a phone down in exactly two places. DuckAds is built so neither one
+costs you anything you can feel, and ships the means to check rather than asking you to trust it.
+
+**Name lookups.** The system resolver consults the hosts file on its way to every lookup, and a
+name that is *not* in the file means scanning all of it. So the only thing that matters is length:
+
+* compaction is on by default and drops every domain whose parent is already blocked — on a
+  typical merge that is 20-40% of the lines, with identical coverage
+* the IPv6 sink is off by default, because it doubles the file for no extra blocking
+* `max_entries` caps the file when you want a hard ceiling
+* a build over 250 000 entries says so in the log
+* blocked names are *faster* than normal ones: they are answered from the file with no DNS
+  query at all
+
+Measure it on your own device:
+
+```bash
+duckads --bench
+```
+
+It times a lookup of the first blocked name in the file against the last one. The difference is
+what your list length costs per lookup — everything else in that number is your device, not
+DuckAds. The WebUI has the same thing behind **Measure lookup cost** on the Status tab.
+
+**Throughput.** The DNS-bypass chains are entered only for *new connections* on the DNS ports:
+
+```
+-p tcp -m conntrack --ctstate NEW -m multiport --dports 443,853 -j duckads_t
+```
+
+A download, a video stream or a speed test never walks a single DuckAds rule — the rules see the
+first packet of a connection and nothing after it. If a kernel has no conntrack match, DuckAds
+falls back to a plain port match and says so on the Settings tab instead of quietly costing you
+per-packet CPU. Blocked endpoints are rejected with a TCP reset rather than dropped, so an app
+that tries DoH fails instantly and falls back to system DNS instead of stalling on a timeout.
+
+**Everything else.** No daemon and no watcher: the engine runs when you ask it to, plus one
+crond entry when a schedule is set. Updates run at `nice 19` and idle I/O priority, can be
+capped with a download speed limit, are Wi-Fi-only by default and default to 04:00.
 
 ## Per-app exemptions
 
@@ -154,6 +199,7 @@ Four files, all under `/data/adb/duckads`, all editable from the WebUI:
 | `keep_system_hosts` | on | merges the ROM's own entries back in on every build |
 | `update_schedule` | weekly | `off`, `daily`, `weekly`, `monthly`, `custom` cron |
 | `wifi_only` | on | skip scheduled runs on mobile data |
+| `update_rate_limit` | 0 | cap the download rate of an update, e.g. `500k` |
 
 ## Command line
 
@@ -174,6 +220,7 @@ duckads --rules get|put|add|del|clear <file>
 duckads --exempt add|rm|list <package>
 duckads --dns on|off|status       encrypted-DNS blocking
 duckads --schedule off|daily|weekly|monthly|custom [expr]
+duckads --bench                   what the hosts file costs a name lookup
 duckads --log [lines]
 ```
 

@@ -12,6 +12,7 @@ esac
 . "$MODDIR/lib/dns.sh"
 . "$MODDIR/lib/exempt.sh"
 . "$MODDIR/lib/sched.sh"
+. "$MODDIR/lib/bench.sh"
 
 case "$1" in
     --json) DK_JSON=1; shift ;;
@@ -42,6 +43,7 @@ DuckAds $(sed -n 's/^version=//p' "$MODDIR/module.prop")
   duckads --exempt add|rm|list <package>
   duckads --dns on|off|status   DoH / DoT bypass blocking
   duckads --schedule off|daily|weekly|monthly|custom [expr]
+  duckads --bench               measure what the hosts file costs a name lookup
   duckads --log                 tail the DuckAds log
 EOF
 }
@@ -98,9 +100,15 @@ json_status() {
     printf '"schedule":"%s",' "$(dk_json_str "${update_schedule:-off}")"
     printf '"schedule_expr":"%s",' "$(dk_json_str "$(dk_sched_expr)")"
     printf '"crond":%s,' "$(dk_crond_running && echo 1 || echo 0)"
-    printf '"doh":{"enabled":%s,"hooked":%s,"rules":%s,"strict":%s,"dot":%s,"private_dns":"%s"},' \
+    printf '"doh":{"enabled":%s,"hooked":%s,"rules":%s,"strict":%s,"dot":%s,"gate":"%s","private_dns":"%s"},' \
         "${doh_block:-0}" "${_dns%%|*}" "${_dns##*|}" "${doh_strict:-0}" "${doh_dot:-1}" \
+        "$(dk_json_str "$(dk_state_get doh_gate)")" \
         "$(dk_json_str "$(dk_private_dns_mode)")"
+    printf '"bench":{"when":"%s","entries":%s,"scan_ms":%s,"delta_cms":%s},' \
+        "$(dk_json_str "$(dk_state_get bench_when)")" \
+        "$(dk_state_get bench_entries | grep -E '^[0-9]+$' || echo 0)" \
+        "$(dk_state_get bench_scan_ms | grep -E '^-?[0-9]+$' || echo -1)" \
+        "$(dk_state_get bench_delta_cms | grep -E '^-?[0-9]+$' || echo -1)"
     printf '"exempt":{"mech":"%s","label":"%s","count":%s},' \
         "$(dk_json_str "$_mech")" "$(dk_json_str "$(dk_exempt_mech_label "$_mech")")" "${_exn:-0}"
     printf '"settings":{'
@@ -410,6 +418,9 @@ case "$1" in
                 ;;
             *) usage; exit 1 ;;
         esac
+        ;;
+    --bench)
+        dk_bench
         ;;
     --log)
         tail -n "${2:-200}" "$LOGFILE" 2>/dev/null

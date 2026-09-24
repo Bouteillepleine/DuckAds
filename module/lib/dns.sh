@@ -1,11 +1,12 @@
-DK_CHAIN=duckads
+DK_CHAIN_T=duckads_t
+DK_CHAIN_U=duckads_u
 
 dk_ipt() {
     _fam=$1
     shift
     case "$_fam" in
-        4) dk_have iptables || return 1; iptables "$@" 2>/dev/null ;;
-        6) dk_have ip6tables || return 1; ip6tables "$@" 2>/dev/null ;;
+        4) dk_have iptables || return 1; iptables -w 5 "$@" 2>/dev/null || iptables "$@" 2>/dev/null ;;
+        6) dk_have ip6tables || return 1; ip6tables -w 5 "$@" 2>/dev/null || ip6tables "$@" 2>/dev/null ;;
     esac
 }
 
@@ -16,33 +17,104 @@ dk_dns_targets() {
     } 2>/dev/null | sed 's/\r$//; s/#.*//' | awk 'NF { print $1 }'
 }
 
-dk_dns_reject() {
+dk_system_resolvers() {
+    {
+        for p in net.dns1 net.dns2 net.dns3 net.dns4; do
+            getprop "$p" 2>/dev/null
+        done
+        dumpsys connectivity 2>/dev/null |
+            sed -n 's/.*[Dd]ns[A-Za-z]*: *\[\{0,1\}\([^]]*\)\].*/\1/p' |
+            tr ', ' '\n'
+    } 2>/dev/null |
+        sed 's|/.*||' |
+        awk '/^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/ || /^[0-9a-fA-F:]+:[0-9a-fA-F:]+$/ { print }' |
+        sort -u
+}
+
+dk_dns_gate() {
+    if dk_ipt 4 -A "$DK_CHAIN_T" -m conntrack --ctstate NEW -j RETURN; then
+        dk_ipt 4 -D "$DK_CHAIN_T" -m conntrack --ctstate NEW -j RETURN
+        echo conntrack
+        return 0
+    fi
+    if dk_ipt 4 -A "$DK_CHAIN_T" -m state --state NEW -j RETURN; then
+        dk_ipt 4 -D "$DK_CHAIN_T" -m state --state NEW -j RETURN
+        echo state
+        return 0
+    fi
+    echo none
+    return 1
+}
+
+dk_dns_reject_tcp() {
     _fam=$1
-    shift
-    dk_ipt "$_fam" -A "$DK_CHAIN" "$@" -j REJECT ||
-        dk_ipt "$_fam" -A "$DK_CHAIN" "$@" -j DROP
+    _chain=$2
+    shift 2
+    dk_ipt "$_fam" -A "$_chain" -p tcp "$@" -j REJECT --reject-with tcp-reset ||
+        dk_ipt "$_fam" -A "$_chain" -p tcp "$@" -j REJECT ||
+        dk_ipt "$_fam" -A "$_chain" -p tcp "$@" -j DROP
+}
+
+dk_dns_reject_udp() {
+    _fam=$1
+    _chain=$2
+    shift 2
+    dk_ipt "$_fam" -A "$_chain" -p udp "$@" -j REJECT ||
+        dk_ipt "$_fam" -A "$_chain" -p udp "$@" -j DROP
 }
 
 dk_dns_chain_reset() {
-    _fam=$1
-    dk_ipt "$_fam" -N "$DK_CHAIN"
-    dk_ipt "$_fam" -F "$DK_CHAIN" || return 1
+    for f in 4 6; do
+        for c in "$DK_CHAIN_T" "$DK_CHAIN_U"; do
+            dk_ipt "$f" -N "$c"
+            dk_ipt "$f" -F "$c"
+        done
+    done
+    dk_ipt 4 -F "$DK_CHAIN_T" || return 1
     return 0
 }
 
-dk_dns_hook() {
+dk_dns_hook_one() {
     _fam=$1
-    dk_ipt "$_fam" -C OUTPUT -j "$DK_CHAIN" && return 0
-    dk_ipt "$_fam" -I OUTPUT 1 -j "$DK_CHAIN"
+    _proto=$2
+    _chain=$3
+    _ports=$4
+    _gate=$5
+    set -- -p "$_proto"
+    case "$_gate" in
+        conntrack) set -- "$@" -m conntrack --ctstate NEW ;;
+        state)     set -- "$@" -m state --state NEW ;;
+    esac
+    if dk_ipt "$_fam" -C OUTPUT "$@" -m multiport --dports "$_ports" -j "$_chain"; then
+        return 0
+    fi
+    if dk_ipt "$_fam" -I OUTPUT 1 "$@" -m multiport --dports "$_ports" -j "$_chain"; then
+        return 0
+    fi
+    _rc=1
+    for p in $(echo "$_ports" | tr ',' ' '); do
+        dk_ipt "$_fam" -C OUTPUT "$@" --dport "$p" -j "$_chain" && { _rc=0; continue; }
+        dk_ipt "$_fam" -I OUTPUT 1 "$@" --dport "$p" -j "$_chain" && _rc=0
+    done
+    return $_rc
 }
 
 dk_dns_unhook() {
-    _fam=$1
-    while dk_ipt "$_fam" -C OUTPUT -j "$DK_CHAIN"; do
-        dk_ipt "$_fam" -D OUTPUT -j "$DK_CHAIN" || break
+    for f in 4 6; do
+        for c in "$DK_CHAIN_T" "$DK_CHAIN_U"; do
+            _n=0
+            while dk_ipt "$f" -S OUTPUT 2>/dev/null | grep -q -- "-j $c"; do
+                _rule=$(dk_ipt "$f" -S OUTPUT | grep -m1 -- "-j $c" | sed 's/^-A OUTPUT //')
+                [ -n "$_rule" ] || break
+                # shellcheck disable=SC2086
+                dk_ipt "$f" -D OUTPUT $_rule || break
+                _n=$((_n + 1))
+                [ "$_n" -gt 20 ] && break
+            done
+            dk_ipt "$f" -F "$c"
+            dk_ipt "$f" -X "$c"
+        done
     done
-    dk_ipt "$_fam" -F "$DK_CHAIN"
-    dk_ipt "$_fam" -X "$DK_CHAIN"
     return 0
 }
 
@@ -57,55 +129,84 @@ dk_dns_apply() {
         return 1
     fi
 
-    _n4=0
-    _n6=0
-    dk_dns_chain_reset 4 || { dk_log "[x] could not create the iptables chain"; return 1; }
-    dk_dns_chain_reset 6
+    dk_dns_unhook
+    dk_dns_chain_reset || { dk_log "[x] could not create the iptables chains"; return 1; }
+
+    _gate=$(dk_dns_gate)
+    _ports=443
+    [ "$doh_dot" = 1 ] && _ports="443,853"
+    [ "$doh_strict" = 1 ] && _ports="$_ports,53"
 
     if [ "$doh_dot" = 1 ]; then
-        dk_dns_reject 4 -p tcp --dport 853
-        dk_dns_reject 4 -p udp --dport 853
-        dk_dns_reject 6 -p tcp --dport 853
-        dk_dns_reject 6 -p udp --dport 853
+        dk_dns_reject_tcp 4 "$DK_CHAIN_T" --dport 853
+        dk_dns_reject_tcp 6 "$DK_CHAIN_T" --dport 853
+        dk_dns_reject_udp 4 "$DK_CHAIN_U" --dport 853
+        dk_dns_reject_udp 6 "$DK_CHAIN_U" --dport 853
     fi
 
+    _skip=""
+    if [ "$doh_strict" = 1 ]; then
+        _skip=$(dk_system_resolvers)
+        [ -n "$_skip" ] && dk_log "[*] strict mode leaves the system resolvers alone: $(echo "$_skip" | tr '\n' ' ')"
+    fi
+
+    _n=0
     for ip in $(dk_dns_targets); do
         case "$ip" in
             *:*) _f=6 ;;
             *.*) _f=4 ;;
             *) continue ;;
         esac
-        dk_dns_reject "$_f" -d "$ip" -p tcp --dport 443
-        dk_dns_reject "$_f" -d "$ip" -p udp --dport 443
+        dk_dns_reject_tcp "$_f" "$DK_CHAIN_T" -d "$ip" --dport 443
+        dk_dns_reject_udp "$_f" "$DK_CHAIN_U" -d "$ip" --dport 443
         if [ "$doh_strict" = 1 ]; then
-            dk_dns_reject "$_f" -d "$ip" -p udp --dport 53
-            dk_dns_reject "$_f" -d "$ip" -p tcp --dport 53
+            case "
+$_skip
+" in
+                *"
+$ip
+"*) ;;
+                *)
+                    dk_dns_reject_tcp "$_f" "$DK_CHAIN_T" -d "$ip" --dport 53
+                    dk_dns_reject_udp "$_f" "$DK_CHAIN_U" -d "$ip" --dport 53
+                    ;;
+            esac
         fi
-        [ "$_f" = 4 ] && _n4=$((_n4 + 1)) || _n6=$((_n6 + 1))
+        _n=$((_n + 1))
     done
 
-    dk_dns_hook 4
-    dk_dns_hook 6
+    _hooked=0
+    for f in 4 6; do
+        dk_dns_hook_one "$f" tcp "$DK_CHAIN_T" "$_ports" "$_gate" && _hooked=$((_hooked + 1))
+        dk_dns_hook_one "$f" udp "$DK_CHAIN_U" "$_ports" "$_gate" && _hooked=$((_hooked + 1))
+    done
+
     dk_state_set doh_active 1
-    dk_state_set doh_targets "$((_n4 + _n6))"
-    dk_log "[+] DNS bypass blocking armed for $((_n4 + _n6)) endpoints"
+    dk_state_set doh_targets "$_n"
+    dk_state_set doh_gate "$_gate"
+    if [ "$_gate" = none ]; then
+        dk_log "[!] this kernel has no conntrack match, so the rules are checked on every packet, not once per connection"
+    fi
+    dk_log "[+] DNS bypass blocking armed for $_n endpoints (gate: $_gate, $_hooked hooks)"
     return 0
 }
 
 dk_dns_clear() {
-    dk_dns_unhook 4
-    dk_dns_unhook 6
+    dk_dns_unhook
     dk_state_set doh_active 0
     dk_state_set doh_targets 0
+    dk_state_set doh_gate ""
     return 0
 }
 
 dk_dns_status() {
-    _c=$(dk_ipt 4 -S "$DK_CHAIN" | grep -c "^-A $DK_CHAIN")
+    _c=$(dk_ipt 4 -S "$DK_CHAIN_T" 2>/dev/null | grep -c -- "-A $DK_CHAIN_T")
+    _cu=$(dk_ipt 4 -S "$DK_CHAIN_U" 2>/dev/null | grep -c -- "-A $DK_CHAIN_U")
     case "$_c" in ''|*[!0-9]*) _c=0 ;; esac
+    case "$_cu" in ''|*[!0-9]*) _cu=0 ;; esac
     _h=0
-    dk_ipt 4 -C OUTPUT -j "$DK_CHAIN" && _h=1
-    echo "$_h|$_c"
+    dk_ipt 4 -S OUTPUT 2>/dev/null | grep -q -- "-j $DK_CHAIN_T" && _h=1
+    echo "$_h|$((_c + _cu))"
 }
 
 dk_private_dns_mode() {
