@@ -1,4 +1,4 @@
-# DuckAds
+![DuckAds](docs/banner.png)
 
 Systemless ad blocking for Android. Builds a hosts file from blocklists and serves it with
 whatever your root setup supports: NoMount injection, a SUSFS open redirect, a kernel umount,

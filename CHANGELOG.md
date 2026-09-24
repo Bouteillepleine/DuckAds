@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.0.11
+## v1.0.12
 
 First public release.
 
