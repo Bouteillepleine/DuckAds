@@ -88,10 +88,16 @@ hanging on a timeout.
 
 ## Credits
 
+**[bindhosts](https://github.com/bindhosts/bindhosts)** by xx and KOWX712 came first, and the
+idea at the centre of DuckAds is theirs: probe the setup and pick the injection that fits it.
+Building a hosts file is the easy half. Knowing which manager unmounts for denylisted apps, when
+susfs can redirect an open instead of mounting, which helper modules exist and what each one
+needs — bindhosts worked that out in the open, and this module starts from that map.
+
+DuckAds is a separate implementation rather than a fork. If you want the original, use it, it is
+excellent.
+
 Blocklists belong to their maintainers: StevenBlack, HaGeZi, OISD, AdAway, AdGuard, 1Hosts,
 Peter Lowe, Dan Pollock, notracking, Frogeye, abuse.ch, EasyList, anti-AD. Support them.
-
-The mode-probing idea comes from [bindhosts](https://github.com/bindhosts/bindhosts). DuckAds is
-a separate implementation.
 
 GPL-3.0.
