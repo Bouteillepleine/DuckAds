@@ -68,3 +68,10 @@
 - recognises KernelSU, KernelSU Next, SukiSU, SukiSU Ultra, APatch, Magisk, Magisk Delta, Magisk Alpha and Kitsune Magisk, with the version shown under the name
 - scripts/test-managers.sh covers all thirteen branches with stubbed binaries, and runs in CI
 - the hosts path in the Status card wraps at its slashes instead of sliding under the size
+
+## v1.0.10
+
+- the module card leads with a status marker: green tick when blocking is live, warning sign when a source failed, pause when it is off
+- the description is short enough to read next to a metamodule's own tag instead of being truncated
+- module.prop carries webuiIcon and actionIcon, so a WebUI or action shortcut pinned to the home screen gets the DuckAds icon rather than the manager's
+- customize.sh writes the status line at install, so the card is accurate before the first build

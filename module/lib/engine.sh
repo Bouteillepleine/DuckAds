@@ -262,12 +262,13 @@ dk_describe() {
     [ -n "$_c" ] || _c=0
     _label=$(dk_mode_label "${DK_MODE:-$(dk_state_get mode_active)}")
     if [ "$enabled" = 0 ]; then
-        _s="description=status: paused ⏸ | $_label"
+        _s="description=⏸️ paused · nothing is blocked"
     elif [ "$_b" = 0 ]; then
-        _s="description=status: ready 🚀 | $_label"
+        _s="description=🦆 ready · open the WebUI and hit Update"
+    elif [ -n "$_f" ] && [ "$_f" != 0 ]; then
+        _s="description=⚠️ $_b blocked · $_f source(s) failed"
     else
-        _s="description=status: active ✅ | blocked: $_b 🚫 | custom: $_c 🤖 | $_label 🦆"
-        [ -n "$_f" ] && [ "$_f" != 0 ] && _s="$_s | $_f source(s) failed"
+        _s="description=✅ $_b blocked · $_label"
     fi
     grep -qxF "$_s" "$MODDIR/module.prop" 2>/dev/null && return 0
     awk -v d="$_s" '/^description=/ { print d; next } { print }' \

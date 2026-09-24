@@ -72,6 +72,9 @@ ui_print "  $DK_MODE_REASON"
     ui_print "- this mode hides the hosts file from detection" ||
     ui_print "! this mode leaves a visible mount - see the README"
 
+. "$MODPATH/lib/engine.sh"
+dk_describe
+
 ui_print ""
 ui_print "- reboot, then open the module's WebUI and hit Update"
 ui_print "- or run: duckads --update"

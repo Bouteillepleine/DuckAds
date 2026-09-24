@@ -1,7 +1,9 @@
 id=duckads
 name=DuckAds
-version=v1.0.9
-versionCode=10009
+version=v1.0.10
+versionCode=10010
 author=XxxY
-description=Systemless ad blocking 🦆 curated list catalog, NoMount injection, SUSFS autobind, DoH/DoT bypass blocking, per-app exemptions, WebUI.
+description=🦆 ready · open the WebUI and hit Update
 updateJson=https://raw.githubusercontent.com/Bouteillepleine/DuckAds/main/update.json
+webuiIcon=webroot/icon.png
+actionIcon=webroot/icon.png
