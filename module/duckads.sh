@@ -100,6 +100,7 @@ json_status() {
     dk_esc "$DK_MODE_AUTO";      _v_modeauto=$DK_E
     dk_esc "$DK_MODE_REASON";    _v_reason=$DK_E
     dk_esc "$DK_MANAGER";        _v_manager=$DK_E
+    dk_esc "$DK_MANAGER_VER";    _v_managerver=$DK_E
     dk_esc "$_susfs";            _v_susfs=$DK_E
     dk_esc "$DKS_last_update";   _v_last=$DK_E
     dk_esc "$DK_HOSTS";          _v_path=$DK_E
@@ -127,6 +128,7 @@ json_status() {
     printf '"blocked":%s,"custom":%s,"sources_enabled":%s,"sources_ok":%s,"sources_fail":%s,"last_update":"%s","build_seconds":%s,"hosts_path":"%s","hosts_size":%s,"live_root":%s,"live_app":%s,' \
         "$_n_blocked" "$_n_custom" "$_srcn" "$_n_ok" "$_n_fail" "$_v_last" "$_n_build" \
         "$_v_path" "$_size" "${DK_LIVE_ROOT:-0}" "${DK_LIVE_APP:--1}"
+    printf '"manager_ver":"%s",' "$_v_managerver"
     printf '"schedule":"%s","schedule_expr":"%s","crond":%s,' "$_v_sched" "$_v_schedx" "$_crond"
     printf '"doh":{"enabled":%s,"hooked":%s,"rules":%s,"strict":%s,"dot":%s,"gate":"%s","private_dns":"%s"},' \
         "${doh_block:-0}" "${DK_DNS_HOOKED:-0}" "${DK_DNS_RULES:-0}" "${doh_strict:-0}" "${doh_dot:-1}" \

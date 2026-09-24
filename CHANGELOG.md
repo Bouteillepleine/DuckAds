@@ -61,3 +61,10 @@
 
 - secondary text was too dark to read on the dark theme: the faint token sat at 3.5:1 contrast against the card, now 6:1, with the muted token and the light theme raised to match
 - description, hint and note text goes from 11.5px to 12.5px
+
+## v1.0.9
+
+- root manager detection asks the manager's own binary instead of trusting environment variables a fork may not set: a KernelSU Next build that reports KSU_NEXT=false was being shown as plain KernelSU
+- recognises KernelSU, KernelSU Next, SukiSU, SukiSU Ultra, APatch, Magisk, Magisk Delta, Magisk Alpha and Kitsune Magisk, with the version shown under the name
+- scripts/test-managers.sh covers all thirteen branches with stubbed binaries, and runs in CI
+- the hosts path in the Status card wraps at its slashes instead of sliding under the size

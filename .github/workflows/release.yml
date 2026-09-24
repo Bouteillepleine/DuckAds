@@ -28,6 +28,9 @@ jobs:
       - name: parser golden test
         run: bash scripts/test-parser.sh
 
+      - name: root manager detection matrix
+        run: bash scripts/test-managers.sh
+
       - name: package
         run: bash scripts/package.sh
 

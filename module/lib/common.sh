@@ -22,7 +22,7 @@ dk_versioncode() {
 }
 
 dk_prop_load() {
-    [ -n "$DK_VCODE" ] && return 0
+    [ -n "${DK_VCODE:-}" ] && return 0
     DK_VCODE=0
     DK_VERSION=""
     while IFS='=' read -r _pk _pv; do
@@ -148,7 +148,7 @@ dk_state_load() {
 }
 
 dk_state_num() {
-    eval "DK_N=\${DKS_$1}"
+    eval "DK_N=\${DKS_$1:-}"
     case "$DK_N" in
         ''|*[!0-9]*) DK_N=${2:-0} ;;
     esac
@@ -204,7 +204,7 @@ dk_nomount_reload() {
 
 dk_susfs_features() {
     [ -x "$SUSFS_BIN" ] || return 1
-    if [ -z "$DK_SUSFS_FEAT" ]; then
+    if [ -z "${DK_SUSFS_FEAT:-}" ]; then
         DK_SUSFS_FEAT=$("$SUSFS_BIN" show enabled_features 2>/dev/null)
         [ -n "$DK_SUSFS_FEAT" ] || DK_SUSFS_FEAT=none
     fi
@@ -310,40 +310,73 @@ dk_tmpdir() {
 }
 
 dk_manager_name() {
-    DK_MANAGER=$(dk_manager_name_raw)
+    dk_manager_name_set
     echo "$DK_MANAGER"
 }
 
-dk_manager_name_set() {
-    [ -n "$DK_MANAGER" ] && return 0
-    if [ "$APATCH" = true ]; then DK_MANAGER=APatch
-    elif [ "$KSU_NEXT" = true ]; then DK_MANAGER="KernelSU Next"
-    elif [ "$KSU" = true ]; then DK_MANAGER=KernelSU
-    elif [ -n "$MAGISK_VER_CODE" ]; then DK_MANAGER=Magisk
-    elif dk_have ksud; then DK_MANAGER=KernelSU
-    elif [ -f /data/adb/apd ]; then DK_MANAGER=APatch
-    elif dk_have magisk; then DK_MANAGER=Magisk
-    else DK_MANAGER=unknown
-    fi
+dk_ksud_flavour() {
+    dk_have ksud || return 1
+    _help=$(ksud --help 2>&1)
+    case "$_help" in
+        *"KernelSU Next"*) echo "KernelSU Next"; return 0 ;;
+        *"SukiSU Ultra"*)  echo "SukiSU Ultra"; return 0 ;;
+        *SukiSU*)          echo "SukiSU"; return 0 ;;
+    esac
+    case "$_help" in
+        *KernelSU*)
+            case "$_help" in
+                *" kpm "*|*"KPM"*) echo "SukiSU" ;;
+                *) echo "KernelSU" ;;
+            esac
+            return 0
+            ;;
+    esac
+    return 1
+}
+
+dk_magisk_flavour() {
+    dk_have magisk || return 1
+    _mv=$(magisk -c 2>/dev/null | tr -d '\r\n')
+    case "$_mv" in
+        *delta*|*Delta*)     echo "Magisk Delta" ;;
+        *kitsune*|*Kitsune*) echo "Kitsune Magisk" ;;
+        *alpha*|*Alpha*)     echo "Magisk Alpha" ;;
+        *)                   echo "Magisk" ;;
+    esac
     return 0
 }
 
-dk_manager_name_raw() {
-    if [ "$APATCH" = true ]; then
-        echo APatch
-    elif [ "$KSU_NEXT" = true ]; then
-        echo "KernelSU Next"
-    elif [ "$KSU" = true ]; then
-        echo KernelSU
-    elif [ -n "$MAGISK_VER_CODE" ]; then
-        echo Magisk
-    elif dk_have ksud; then
-        echo KernelSU
-    elif [ -f /data/adb/apd ]; then
-        echo APatch
-    elif dk_have magisk; then
-        echo Magisk
-    else
-        echo unknown
+dk_manager_name_set() {
+    [ -n "${DK_MANAGER:-}" ] && return 0
+    DK_MANAGER=""
+    DK_MANAGER_VER=""
+
+    if [ "$APATCH" = true ] || [ -f /data/adb/apd ] || dk_have apd; then
+        DK_MANAGER=APatch
+        DK_MANAGER_VER=${APATCH_VER_CODE:-$(apd -V 2>/dev/null | tr -d '\r\n')}
     fi
+
+    if [ -z "$DK_MANAGER" ] && { [ "$KSU" = true ] || dk_have ksud || [ -d /data/adb/ksu ]; }; then
+        DK_MANAGER=$(dk_ksud_flavour)
+        if [ -z "$DK_MANAGER" ]; then
+            if [ "$KSU_NEXT" = true ]; then
+                DK_MANAGER="KernelSU Next"
+            else
+                DK_MANAGER=KernelSU
+            fi
+        fi
+        DK_MANAGER_VER=$KSU_VER_CODE
+        [ -n "$KSU_KERNEL_VER_CODE" ] && [ "$KSU_KERNEL_VER_CODE" != 0 ] &&
+            DK_MANAGER_VER="$DK_MANAGER_VER / kernel $KSU_KERNEL_VER_CODE"
+    fi
+
+    if [ -z "$DK_MANAGER" ] && { [ -n "$MAGISK_VER_CODE" ] || dk_have magisk; }; then
+        DK_MANAGER=$(dk_magisk_flavour) || DK_MANAGER=Magisk
+        DK_MANAGER_VER=$(magisk -c 2>/dev/null | tr -d '\r\n')
+        [ -n "$DK_MANAGER_VER" ] || DK_MANAGER_VER=$MAGISK_VER_CODE
+    fi
+
+    [ -n "$DK_MANAGER" ] || DK_MANAGER=unknown
+    return 0
 }
+

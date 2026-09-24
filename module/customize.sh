@@ -14,14 +14,11 @@ if [ "$BOOTMODE" != true ]; then
     abort
 fi
 
-if [ "$KSU" = true ]; then
-    ui_print "- manager: KernelSU (code $KSU_VER_CODE, kernel $KSU_KERNEL_VER_CODE)"
-elif [ "$APATCH" = true ]; then
-    ui_print "- manager: APatch (code $APATCH_VER_CODE)"
-elif [ -n "$MAGISK_VER_CODE" ]; then
-    ui_print "- manager: Magisk $MAGISK_VER_CODE"
-else
+dk_manager_name_set
+if [ "$DK_MANAGER" = unknown ]; then
     ui_print "! unknown root manager, continuing anyway"
+else
+    ui_print "- manager: $DK_MANAGER${DK_MANAGER_VER:+ ($DK_MANAGER_VER)}"
 fi
 
 dk_seed

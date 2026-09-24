@@ -146,9 +146,12 @@
   .row .v { margin-left: auto; text-align: right; font-weight: 600; flex: 0 0 auto; max-width: 58%; }
   .row .stack { min-width: 0; }
   .row .v.mono { font-family: var(--mono); font-size: 12px; font-weight: 500; }
-  .stack { display: block; }
-  .stack .t { font-size: 13.5px; font-weight: 620; }
-  .stack .d { font-size: 12.5px; color: var(--faint); margin-top: 3px; line-height: 1.5; }
+  .stack { display: block; min-width: 0; }
+  .stack .t { font-size: 13.5px; font-weight: 620; overflow-wrap: anywhere; }
+  .stack .d {
+    font-size: 12.5px; color: var(--faint); margin-top: 3px; line-height: 1.5;
+    overflow-wrap: anywhere; word-break: break-word;
+  }
   .badge {
     display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11px;
     font-weight: 700; letter-spacing: 0.2px; border: 1px solid var(--brd); white-space: nowrap;
@@ -295,6 +298,9 @@
   function b64(s) {
     return btoa(unescape(encodeURIComponent(String(s))));
   }
+  function escPath(s) {
+    return esc(s).replace(/\//g, "/​");
+  }
   function num(n) {
     return String(n === null || n === undefined || isNaN(n) ? 0 : n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
   }
@@ -369,7 +375,7 @@
   }
 
   function rowTop(title, desc, right) {
-    return '<div class="row"><div class="stack"><div class="t">' + title + '</div>' +
+    return '<div class="row"><div class="stack" style="flex:1 1 auto"><div class="t">' + title + '</div>' +
       (desc ? '<div class="d">' + desc + "</div>" : "") + "</div>" +
       '<div class="v">' + right + "</div></div>";
   }
@@ -420,13 +426,13 @@
 
     h += '<div class="card">' +
       "<h2>Environment</h2>" +
-      rowTop("Root manager", "", esc(s.manager)) +
+      rowTop("Root manager", s.manager_ver ? esc(s.manager_ver) : "", esc(s.manager)) +
       (s.susfs ? rowTop("SUSFS", "hosts registered automatically", esc(s.susfs)) : "") +
       rowTop("NoMount", s.nomount ? "metamodule serves the file, zero mounts" : "not installed",
         s.nomount ? '<span class="badge ok">active</span>' : '<span class="badge dim">no</span>') +
       rowTop("Sources", esc(s.sources_ok + " fetched, " + s.sources_fail + " failed"),
         String(s.sources_enabled) + " on") +
-      rowTop("Hosts size", esc(s.hosts_path), (s.hosts_size / 1048576).toFixed(1) + " MB") +
+      rowTop("Hosts size", escPath(s.hosts_path), (s.hosts_size / 1048576).toFixed(1) + " MB") +
       rowTop("DNS bypass block", s.doh.enabled ? esc(s.doh.rules + " rules in the duckads chain") : "off",
         s.doh.enabled ? (s.doh.hooked ? '<span class="badge ok">armed</span>' : '<span class="badge bad">not hooked</span>')
           : '<span class="badge dim">off</span>') +

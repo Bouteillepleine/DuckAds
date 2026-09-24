@@ -255,7 +255,7 @@ dk_private_dns_mode() {
 }
 
 dk_private_dns_mode_set() {
-    [ -n "$DK_PDNS" ] && return 0
+    [ -n "${DK_PDNS:-}" ] && return 0
     DK_PDNS=$(settings get global private_dns_mode 2>/dev/null | tr -d '\r\n')
     [ -n "$DK_PDNS" ] || DK_PDNS=unknown
     return 0

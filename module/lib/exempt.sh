@@ -1,5 +1,5 @@
 dk_exempt_mech_set() {
-    [ -n "$DK_MECH" ] && return 0
+    [ -n "${DK_MECH:-}" ] && return 0
     if dk_nomount_bin > /dev/null 2>&1; then
         DK_MECH=nomount
     elif dk_have ksud && ksud profile --help 2>&1 | grep -q "set"; then
