@@ -1,16 +1,15 @@
-name: release
+name: ci
 
 on:
   push:
-    tags:
-      - "v*"
+    branches: [main, prerelease]
+  pull_request:
+    branches: [main, prerelease]
   workflow_dispatch:
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -26,6 +25,15 @@ jobs:
         run: |
           awk -f module/lib/parse.awk /dev/null
           awk -f module/lib/filter.awk -v WL=/dev/null /dev/null
+          awk -f module/lib/catalog.awk -v SRCS=/dev/null -v STAT=/dev/null /dev/null
+          awk -f module/lib/apps.awk -v EX=/dev/null /dev/null
+
+      - name: no CRLF
+        run: |
+          if grep -rlU $'\r' module --exclude='*.png'; then
+            echo "CRLF found"
+            exit 1
+          fi
 
       - name: parser golden test
         run: bash scripts/test-parser.sh
@@ -33,26 +41,10 @@ jobs:
       - name: root manager detection matrix
         run: bash scripts/test-managers.sh
 
-      - name: version matches the tag
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |
-          prop=$(sed -n 's/^version=//p' module/module.prop)
-          if [ "$prop" != "${GITHUB_REF_NAME}" ]; then
-            echo "module.prop says $prop, tag says ${GITHUB_REF_NAME}"
-            exit 1
-          fi
-
       - name: package
         run: bash scripts/package.sh
 
       - uses: actions/upload-artifact@v4
         with:
-          name: DuckAds
+          name: DuckAds-${{ github.ref_name }}
           path: release/*.zip
-
-      - name: release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: release/*.zip
-          body_path: CHANGELOG.md

@@ -1003,12 +1003,22 @@
     else renderSettings();
   }
 
+  var SHORT_MODE = {
+    nomount: "NoMount",
+    susfs_redirect: "SUSFS redirect",
+    susfs_bind: "SUSFS bind",
+    zn_redirect: "ZN redirect",
+    ap_redirect: "APatch redirect",
+    ksud_umount: "ksud umount",
+    overlay: "overlay",
+    bind: "bind",
+    mount: "magic mount"
+  };
+
   function subtitle() {
     var s = STATE;
     if (!s) return "reading device state…";
-    var bits = [s.manager || "unknown manager", s.mode_label];
-    if (s.susfs) bits.push("susfs " + s.susfs);
-    return bits.join(" · ");
+    return [s.manager || "unknown manager", SHORT_MODE[s.mode] || s.mode].join(" · ");
   }
 
   async function refresh() {
