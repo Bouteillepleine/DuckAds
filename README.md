@@ -92,7 +92,7 @@ hanging on a timeout.
 idea at the centre of DuckAds is theirs: probe the setup and pick the injection that fits it.
 Building a hosts file is the easy half. Knowing which manager unmounts for denylisted apps, when
 susfs can redirect an open instead of mounting, which helper modules exist and what each one
-needs — bindhosts worked that out in the open, and this module starts from that map.
+needs, bindhosts worked that out in the open, and this module starts from that map.
 
 DuckAds is a separate implementation rather than a fork. If you want the original, use it, it is
 excellent.
