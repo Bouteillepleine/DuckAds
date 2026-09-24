@@ -1,5 +1,25 @@
 DK_MODES="nomount susfs_redirect zn_redirect ap_redirect ksud_umount susfs_bind overlay bind mount"
 
+dk_mode_label_set() {
+    case "$1" in
+        nomount)        DK_MODE_LABEL="NoMount injection" ;;
+        susfs_redirect) DK_MODE_LABEL="SUSFS open_redirect" ;;
+        zn_redirect)    DK_MODE_LABEL="ZN hostsredirect" ;;
+        ap_redirect)    DK_MODE_LABEL="APatch hosts_file_redirect" ;;
+        ksud_umount)    DK_MODE_LABEL="bind + ksud kernel umount" ;;
+        susfs_bind)     DK_MODE_LABEL="bind + SUSFS autobind" ;;
+        overlay)        DK_MODE_LABEL="overlayfs on /system/etc" ;;
+        bind)           DK_MODE_LABEL="plain bind mount" ;;
+        mount)          DK_MODE_LABEL="manager magic mount" ;;
+        *)              DK_MODE_LABEL=$1 ;;
+    esac
+    case "$1" in
+        nomount|susfs_redirect|zn_redirect|ap_redirect|ksud_umount|susfs_bind) DK_MODE_HIDDEN=1 ;;
+        *) DK_MODE_HIDDEN=0 ;;
+    esac
+    return 0
+}
+
 dk_mode_label() {
     case "$1" in
         nomount)        echo "NoMount injection" ;;

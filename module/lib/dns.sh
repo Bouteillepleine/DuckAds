@@ -133,15 +133,22 @@ dk_dns_apply() {
     dk_dns_chain_reset || { dk_log "[x] could not create the iptables chains"; return 1; }
 
     _gate=$(dk_dns_gate)
+    _pdns=$(dk_private_dns_mode)
+    _dot=$doh_dot
+    if [ "$_dot" = 1 ] && [ "$_pdns" = hostname ]; then
+        _dot=0
+        dk_log "[!] Private DNS is set to a hostname, so port 853 is left alone - blocking it would take the phone's own DNS down"
+    fi
     _ports=443
-    [ "$doh_dot" = 1 ] && _ports="443,853"
+    [ "$_dot" = 1 ] && _ports="443,853"
     [ "$doh_strict" = 1 ] && _ports="$_ports,53"
-
-    if [ "$doh_dot" = 1 ]; then
+    if [ "$_dot" = 1 ]; then
         dk_dns_reject_tcp 4 "$DK_CHAIN_T" --dport 853
         dk_dns_reject_tcp 6 "$DK_CHAIN_T" --dport 853
         dk_dns_reject_udp 4 "$DK_CHAIN_U" --dport 853
         dk_dns_reject_udp 6 "$DK_CHAIN_U" --dport 853
+        [ "$_pdns" = opportunistic ] &&
+            dk_log "[*] Private DNS is on automatic, so this downgrades the system resolver to plain DNS"
     fi
 
     _skip=""
@@ -200,17 +207,33 @@ dk_dns_clear() {
 }
 
 dk_dns_status() {
+    if [ "$doh_block" != 1 ]; then
+        DK_DNS_HOOKED=0
+        DK_DNS_RULES=0
+        echo "hooked=0 rules=0 gate="
+        return 0
+    fi
     _c=$(dk_ipt 4 -S "$DK_CHAIN_T" 2>/dev/null | grep -c -- "-A $DK_CHAIN_T")
     _cu=$(dk_ipt 4 -S "$DK_CHAIN_U" 2>/dev/null | grep -c -- "-A $DK_CHAIN_U")
     case "$_c" in ''|*[!0-9]*) _c=0 ;; esac
     case "$_cu" in ''|*[!0-9]*) _cu=0 ;; esac
-    _h=0
-    dk_ipt 4 -S OUTPUT 2>/dev/null | grep -q -- "-j $DK_CHAIN_T" && _h=1
-    echo "$_h|$((_c + _cu))"
+    DK_DNS_HOOKED=0
+    dk_ipt 4 -S OUTPUT 2>/dev/null | grep -q -- "-j $DK_CHAIN_T" && DK_DNS_HOOKED=1
+    DK_DNS_RULES=$((_c + _cu))
+    echo "hooked=$DK_DNS_HOOKED rules=$DK_DNS_RULES gate=$(dk_state_get doh_gate)"
+    return 0
 }
 
 dk_private_dns_mode() {
-    settings get global private_dns_mode 2>/dev/null | tr -d '\r\n'
+    dk_private_dns_mode_set
+    echo "$DK_PDNS"
+}
+
+dk_private_dns_mode_set() {
+    [ -n "$DK_PDNS" ] && return 0
+    DK_PDNS=$(settings get global private_dns_mode 2>/dev/null | tr -d '\r\n')
+    [ -n "$DK_PDNS" ] || DK_PDNS=unknown
+    return 0
 }
 
 dk_private_dns_off() {

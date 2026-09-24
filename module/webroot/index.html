@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta http-equiv="Cache-Control" content="no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" />
 <title>DuckAds</title>
 <link rel="icon" type="image/png" href="icon.png" />
@@ -182,7 +184,9 @@
   .listitem { display: flex; gap: 11px; align-items: flex-start; padding: 12px 0; border-top: 1px solid var(--brd); }
   .listitem:first-child { border-top: 0; }
   .listitem .meta { min-width: 0; flex: 1 1 auto; }
-  .listitem .name { font-size: 13.5px; font-weight: 640; }
+  .listitem .name { font-size: 13.5px; font-weight: 640; overflow-wrap: anywhere; word-break: break-word; }
+  .listitem.app { align-items: center; }
+  .listitem.app .name { font-family: var(--mono); font-size: 12px; font-weight: 500; line-height: 1.4; }
   .listitem .note { font-size: 11.5px; color: var(--faint); margin-top: 3px; line-height: 1.45; }
   .listitem .url { font-family: var(--mono); font-size: 10.5px; color: var(--faint); margin-top: 4px; word-break: break-all; opacity: .8; }
   pre.log {
@@ -430,7 +434,7 @@
       '<p class="sub">The system resolver reads the hosts file on the way to every name lookup, so the only thing DuckAds can cost you is the length of that file. Measure it rather than guess.</p>' +
       rowTop("Cost per lookup", b.when ? "measured " + esc(b.when) : "run a measurement to find out",
         '<span class="badge ' + costBadge + '">' + esc(costTxt) + "</span>") +
-      rowTop("Entries", "after compaction and allowlisting", num(s.blocked)) +
+      rowTop("Entries", "every name the lists block, minus your allowlist", num(s.blocked)) +
       rowTop("Blocked names", "answered from the file, no DNS query at all",
         '<span class="badge ok">faster than resolving</span>') +
       '<div class="btnrow"><button class="act" id="btnBench">Measure lookup cost</button></div>' +
@@ -712,6 +716,7 @@
       '<button data-scope="user"' + (APPSCOPE === "user" ? ' class="on"' : "") + ">User apps</button>" +
       '<button data-scope="all"' + (APPSCOPE === "all" ? ' class="on"' : "") + ">All apps</button>" +
       "</div>" +
+      (APPSCOPE === "all" ? '<p class="sub">System packages included. RRO overlays are left out - they are resources, not apps that resolve names.</p>' : "") +
       '<input type="text" id="appSearch" placeholder="search packages" value="' + esc(APPSEARCH) + '" />' +
       '<div id="applist"></div>' +
       "</div>";
@@ -740,7 +745,7 @@
     var mech = STATE && STATE.exempt ? STATE.exempt.mech : "none";
     if (!rows.length) { $("applist").innerHTML = '<div class="empty">no package matches</div>'; return; }
     $("applist").innerHTML = rows.slice(0, 400).map(function (a) {
-      return '<div class="listitem"><div class="meta"><div class="name" style="font-family:var(--mono);font-size:12px">' +
+      return '<div class="listitem app"><div class="meta"><div class="name">' +
         esc(a.pkg) + "</div></div>" + sw("app_" + a.pkg.replace(/\./g, "_"), a.exempt === 1) + "</div>";
     }).join("") + (rows.length > 400 ? '<div class="hint">showing the first 400 of ' + rows.length + "</div>" : "");
 
@@ -795,8 +800,6 @@
       selectRow("setSink", "Sink address", "Where blocked names point. 0.0.0.0 fails fastest.",
         ["0.0.0.0", "127.0.0.1"], st.sink) +
       toggleRow("setIpv6", "Also sink IPv6", "Adds a :: line per domain. Doubles the file size.", st.ipv6_sink === "1") +
-      toggleRow("setCompact", "Compact the file",
-        "Drops a domain when a parent domain is already blocked. Smaller file, same coverage.", st.compact === "1") +
       toggleRow("setKeep", "Keep the ROM's own hosts entries", "Merged back in on every build.", st.keep_system_hosts === "1") +
       '<div class="row"><div class="stack" style="flex:1 1 auto"><div class="t">Entry cap</div>' +
       '<div class="d">0 means no cap. Useful on devices where a huge hosts file slows name lookups.</div>' +
@@ -837,11 +840,13 @@
       '<p class="sub">A hosts file only binds apps that ask Android to resolve a name. Apps that speak DoH or DoT straight to a hard-coded resolver walk around it. This adds an iptables chain that closes those endpoints.</p>' +
       toggleRow("setDoh", "Block encrypted-DNS endpoints",
         "TCP and UDP 443 to the known resolver IPs.", st.doh_block === "1") +
-      toggleRow("setDot", "Block DNS-over-TLS", "Port 853 to anywhere.", st.doh_dot === "1") +
+      toggleRow("setDot", "Block DNS-over-TLS",
+        "Port 853 to anywhere. If Private DNS is set to a hostname, DuckAds skips this rule - blocking it would take the phone's own DNS down.",
+        st.doh_dot === "1") +
       toggleRow("setStrict", "Also block plain DNS to those IPs",
         "Port 53 to the same resolvers. More thorough, more likely to upset an app that hard-codes 8.8.8.8.",
         st.doh_strict === "1") +
-      rowTop("Private DNS", "Android's own DoT setting overrides the hosts file for every app",
+      rowTop("Private DNS", "Android's own DoT still reads the hosts file first, so blocking keeps working with it on",
         esc(s.doh.private_dns || "unknown") +
         (s.doh.private_dns && s.doh.private_dns !== "off"
           ? ' <button class="act small" id="btnPdns" style="margin-left:8px">turn off</button>' : "")) +
@@ -876,7 +881,6 @@
     bindSetting("setHour", "update_hour", "value");
     bindSetting("setRate", "update_rate_limit", "value");
     bindSetting("setIpv6", "ipv6_sink", "check");
-    bindSetting("setCompact", "compact", "check");
     bindSetting("setKeep", "keep_system_hosts", "check");
     bindSetting("setWifi", "wifi_only", "check");
     bindSetting("setDoh", "doh_block", "check");

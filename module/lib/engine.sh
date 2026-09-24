@@ -145,13 +145,7 @@ dk_build() {
     LC_ALL=C sort -u "$TMP/cand" > "$TMP/cand.s"
     awk -f "$MODDIR/lib/filter.awk" -v WL="$TMP/wl" "$TMP/cand.s" > "$TMP/kept"
 
-    if [ "$compact" = 1 ]; then
-        awk '{n=split($0,a,"."); k=""; for(i=n;i>0;i--) k=k a[i] "."; print k "\t" $0}' "$TMP/kept" |
-            LC_ALL=C sort |
-            awk -F'\t' 'last != "" && index($1, last) == 1 { next } { last = $1; print $2 }' > "$TMP/final"
-    else
-        cp "$TMP/kept" "$TMP/final"
-    fi
+    mv -f "$TMP/kept" "$TMP/final"
 
     case "$max_entries" in
         ''|0|*[!0-9]*) ;;
@@ -190,7 +184,6 @@ dk_build() {
     rm -rf "$TMP"
     if [ "$_blocked" -gt 250000 ]; then
         dk_log "[!] $_blocked entries is a large file for the system resolver to scan on every lookup"
-        [ "$compact" = 1 ] || dk_log "[!] turning compaction on would cut it without losing coverage"
         dk_log "[!] run 'duckads --bench' to see what it actually costs you"
     fi
     dk_log "[+] blocked: $_blocked | custom: $_custom | sources: $_ok ok, $_fail failed | ${_dur}s"

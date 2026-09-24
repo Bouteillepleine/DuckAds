@@ -17,7 +17,30 @@ DK_QUIET=${DK_QUIET:-0}
 DK_JSON=${DK_JSON:-0}
 
 dk_versioncode() {
-    sed -n 's/^versionCode=//p' "$MODDIR/module.prop" 2>/dev/null | head -n1
+    dk_prop_load
+    echo "$DK_VCODE"
+}
+
+dk_prop_load() {
+    [ -n "$DK_VCODE" ] && return 0
+    DK_VCODE=0
+    DK_VERSION=""
+    while IFS='=' read -r _pk _pv; do
+        case "$_pk" in
+            versionCode) DK_VCODE=$_pv ;;
+            version) DK_VERSION=$_pv ;;
+        esac
+    done < "$MODDIR/module.prop" 2>/dev/null
+    case "$DK_VCODE" in ''|*[!0-9]*) DK_VCODE=0 ;; esac
+    return 0
+}
+
+dk_esc() {
+    case "$1" in
+        *\\*|*\"*|*'	'*|*'
+'*) DK_E=$(printf '%s' "$1" | sed -e 's|\\|\\\\|g' -e 's|"|\\"|g' -e 's|	|\\t|g' | tr -d '\r\n') ;;
+        *) DK_E=$1 ;;
+    esac
 }
 
 dk_kmsg() {
@@ -48,7 +71,6 @@ dk_defaults() {
     mode=auto
     sink=0.0.0.0
     ipv6_sink=0
-    compact=1
     max_entries=0
     keep_system_hosts=1
     update_schedule=weekly
@@ -72,7 +94,7 @@ dk_load_conf() {
 }
 
 dk_conf_keys() {
-    echo "enabled mode sink ipv6_sink compact max_entries keep_system_hosts update_schedule update_cron update_hour update_rate_limit wifi_only doh_block doh_strict doh_dot exempt_enabled notify lists_seeded"
+    echo "enabled mode sink ipv6_sink max_entries keep_system_hosts update_schedule update_cron update_hour update_rate_limit wifi_only doh_block doh_strict doh_dot exempt_enabled notify lists_seeded"
 }
 
 dk_cfg_set() {
@@ -112,6 +134,25 @@ dk_state_set() {
 dk_state_get() {
     [ -f "$STATE" ] || return 0
     sed -n "s|^$1=||p" "$STATE" 2>/dev/null | head -n1
+}
+
+dk_state_load() {
+    [ -f "$STATE" ] || return 0
+    while IFS='=' read -r _k _v; do
+        case "$_k" in
+            ''|*[!a-z_]*) continue ;;
+        esac
+        eval "DKS_$_k=\$_v"
+    done < "$STATE"
+    return 0
+}
+
+dk_state_num() {
+    eval "DK_N=\${DKS_$1}"
+    case "$DK_N" in
+        ''|*[!0-9]*) DK_N=${2:-0} ;;
+    esac
+    echo "$DK_N"
 }
 
 dk_set_perm() {
@@ -249,7 +290,11 @@ dk_lock_release() {
 }
 
 dk_json_str() {
-    printf '%s' "$1" | sed -e 's|\\|\\\\|g' -e 's|"|\\"|g' -e 's|	|\\t|g' | tr -d '\r\n'
+    case "$1" in
+        *\\*|*\"*|*'	'*|*'
+'*) printf '%s' "$1" | sed -e 's|\\|\\\\|g' -e 's|"|\\"|g' -e 's|	|\\t|g' | tr -d '\r\n' ;;
+        *) printf '%s' "$1" ;;
+    esac
 }
 
 dk_tmpdir() {
@@ -265,6 +310,25 @@ dk_tmpdir() {
 }
 
 dk_manager_name() {
+    DK_MANAGER=$(dk_manager_name_raw)
+    echo "$DK_MANAGER"
+}
+
+dk_manager_name_set() {
+    [ -n "$DK_MANAGER" ] && return 0
+    if [ "$APATCH" = true ]; then DK_MANAGER=APatch
+    elif [ "$KSU_NEXT" = true ]; then DK_MANAGER="KernelSU Next"
+    elif [ "$KSU" = true ]; then DK_MANAGER=KernelSU
+    elif [ -n "$MAGISK_VER_CODE" ]; then DK_MANAGER=Magisk
+    elif dk_have ksud; then DK_MANAGER=KernelSU
+    elif [ -f /data/adb/apd ]; then DK_MANAGER=APatch
+    elif dk_have magisk; then DK_MANAGER=Magisk
+    else DK_MANAGER=unknown
+    fi
+    return 0
+}
+
+dk_manager_name_raw() {
     if [ "$APATCH" = true ]; then
         echo APatch
     elif [ "$KSU_NEXT" = true ]; then

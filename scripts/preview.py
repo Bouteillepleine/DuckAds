@@ -42,7 +42,9 @@ for line in io.open(os.path.join(ROOT, "module", "data", "catalog.tsv"), encodin
 
 apps = [{"pkg": p, "exempt": 1 if p in ("com.bank.app", "org.example.game") else 0} for p in [
     "com.android.chrome", "com.bank.app", "org.example.game", "com.spotify.music",
-    "com.whatsapp", "org.mozilla.firefox", "com.reddit.frontpage"]]
+    "com.whatsapp", "org.mozilla.firefox", "com.reddit.frontpage",
+    "com.Gcenter.WindWings.SpaceShooter.Premium", "com.airfrance.android.dinamoprd",
+    "com.amazon.avod.thirdpartyclient"]]
 
 bench = {"entries": 193830, "bytes": 5427962, "scan_ms": 41, "top_cms": 120,
          "bottom_cms": 300, "delta_cms": 180,

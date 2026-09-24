@@ -69,10 +69,7 @@ grep -q "^plaindomain.example.com$" "$TMP/kept" && { echo "exact allowlist did n
 grep -q "^abp2" "$TMP/kept" && { echo "regex allowlist did not apply"; exit 1; }
 grep -q "^ads.example.com$" "$TMP/kept" || { echo "allowlist removed too much"; exit 1; }
 
-awk '{n=split($0,a,"."); k=""; for(i=n;i>0;i--) k=k a[i] "."; print k "\t" $0}' "$TMP/kept" |
-    LC_ALL=C sort |
-    awk -F'\t' 'last != "" && index($1, last) == 1 { next } { last = $1; print $2 }' > "$TMP/compact"
-grep -q "^analytics.doubleclick.net$" "$TMP/compact" && { echo "compaction kept a covered subdomain"; exit 1; }
-grep -q "^doubleclick.net$" "$TMP/compact" || { echo "compaction dropped the parent"; exit 1; }
+grep -q "^analytics.doubleclick.net$" "$TMP/kept" || { echo "a subdomain was dropped - a hosts file matches exact names, so every one must survive"; exit 1; }
+grep -q "^doubleclick.net$" "$TMP/kept" || { echo "the parent domain was dropped"; exit 1; }
 
-echo "parser, allowlist and compaction behave"
+echo "parser and allowlist behave, and no subdomain was suppressed"

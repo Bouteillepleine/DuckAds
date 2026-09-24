@@ -21,3 +21,16 @@
 - duckads --bench measures what the hosts file costs a name lookup, with a WebUI button
 - updates run at nice 19 / idle I/O and take an optional download rate cap
 - a build over 250k entries says so
+
+## v1.0.2
+
+- FIX: dropped parent-domain compaction entirely. A hosts file matches exact names, so suppressing a subdomain whose parent is blocked silently unblocked it - on StevenBlack that was 34k domains, including googleads.g.doubleclick.net
+- FIX: status JSON was invalid on Android. mksh treats a bare | in a pattern as alternation, so ${var%|*} stripped everything and the WebUI got "live_root":, - helpers now return values in variables
+- port 853 is left alone when Private DNS is set to a hostname, which would otherwise take the phone's own DNS down
+- Private DNS is described accurately: Android's DoT still reads the hosts file, so blocking keeps working with it on
+
+## v1.0.3
+
+- the WebUI was slow because every list row and every package spawned its own awk and grep: catalog and app listings are now a single awk pass (Lists 4.2s to 0.09s, Apps 6.5s to 0.15s on an OP15)
+- status assembled without ~40 subshells (1.6s to 0.6s)
+- DNS status skips iptables entirely when blocking is off

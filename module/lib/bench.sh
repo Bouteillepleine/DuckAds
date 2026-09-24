@@ -111,7 +111,7 @@ dk_bench_verdict() {
     _n=$2
     if [ "$_d" -lt 0 ] 2>/dev/null; then
         if [ "$_n" -gt 250000 ]; then
-            echo "$_n lines is a lot - if name lookups feel slow, turn on compaction or cap the entries"
+            echo "$_n lines is a lot - if name lookups feel slow, drop a tier or cap the entries"
             return 0
         fi
         echo "nothing measured end to end, but $_n lines is a normal size"
@@ -124,6 +124,6 @@ dk_bench_verdict() {
     elif [ "$_d" -lt 1000 ]; then
         echo "noticeable on pages with many domains - consider a smaller tier or an entry cap"
     else
-        echo "this list is slowing lookups down - drop an aggressive tier, keep compaction on, or set an entry cap"
+        echo "this list is slowing lookups down - drop an aggressive tier or set an entry cap"
     fi
 }

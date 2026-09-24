@@ -1,6 +1,6 @@
 {
-  "version": "v1.0.1",
-  "versionCode": 10001,
-  "zipUrl": "https://github.com/Bouteillepleine/DuckAds/releases/download/v1.0.1/DuckAds-v1.0.1.zip",
+  "version": "v1.0.3",
+  "versionCode": 10003,
+  "zipUrl": "https://github.com/Bouteillepleine/DuckAds/releases/download/v1.0.3/DuckAds-v1.0.3.zip",
   "changelog": "https://raw.githubusercontent.com/Bouteillepleine/DuckAds/main/CHANGELOG.md"
 }

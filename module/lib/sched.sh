@@ -1,3 +1,8 @@
+dk_sched_expr_set() {
+    DK_SCHED_EXPR=$(dk_sched_expr)
+    return 0
+}
+
 dk_sched_expr() {
     _h=$update_hour
     case "$_h" in ''|*[!0-9]*) _h=4 ;; esac

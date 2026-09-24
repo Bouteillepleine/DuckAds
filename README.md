@@ -37,10 +37,10 @@ the same file is how people end up with no hosts file at all.
 ## How a build works
 
 ```
-sources ──► fetch ──► parse ──► merge ──► allowlist ──► compact ──► compose ──► install
-            curl/    per-source  +your     remote +      parent-     localhost   in place,
-            wget     domain      blacklist your          domain      + your      inode kept
-                     count                 whitelist     suppression custom
+sources ──► fetch ──► parse ──► merge ──► allowlist ──► dedupe ──► compose ──► install
+            curl/    per-source  +your     remote +     sort -u    localhost   in place,
+            wget     domain      blacklist your                    + your      inode kept
+                     count                 whitelist               custom
 ```
 
 * **Parse** normalises everything to a bare domain: lowercased, punycode kept, wildcards
@@ -50,8 +50,8 @@ sources ──► fetch ──► parse ──► merge ──► allowlist ─�
 * **Allowlist** removes a domain and its subdomains. `=example.com` matches exactly,
   `re:^ads[0-9]+\.` is a regular expression. Remote allowlists (the `@@||` rules in HaGeZi's
   whitelists) are merged in automatically.
-* **Compact** drops `ads.example.com` when `example.com` is already blocked. Same coverage,
-  a much smaller file, faster lookups.
+* **Dedupe** is a plain `sort -u`. Nothing else is removed: a hosts file matches exact names,
+  so dropping `ads.example.com` because `example.com` is blocked would silently unblock it.
 * **Install** writes into the existing file rather than replacing it, so a bind mount, an open
   redirect and a NoMount injection all stay valid across an update.
 
@@ -118,8 +118,11 @@ on the DNS ports:
 Add your own endpoints in the **DNS IPs** rule tab. The list-catalog entries *HaGeZi DoH
 bypass* and *DoH + VPN + proxy bypass* cover the name side of the same problem.
 
-Android's own **Private DNS** setting overrides the hosts file for every app on the device.
-DuckAds reports it on the Settings tab and offers to switch it off.
+Android's own **Private DNS** (DoT) does *not* skip the hosts file — the system resolver still
+reads it first, so blocking keeps working with it on. DuckAds shows its state on the Settings
+tab because it is the setting people expect to matter, and offers to turn it off if you want
+plain DNS for other reasons. What does walk around the hosts file is an app shipping its own
+DoH client, which is what the chains above are for.
 
 ## Performance
 
@@ -129,8 +132,8 @@ costs you anything you can feel, and ships the means to check rather than asking
 **Name lookups.** The system resolver consults the hosts file on its way to every lookup, and a
 name that is *not* in the file means scanning all of it. So the only thing that matters is length:
 
-* compaction is on by default and drops every domain whose parent is already blocked — on a
-  typical merge that is 20-40% of the lines, with identical coverage
+* pick the tier that fits the device — Light or Small resolve as fast as no list at all,
+  Ultimate and Xtra are hundreds of thousands of lines
 * the IPv6 sink is off by default, because it doubles the file for no extra blocking
 * `max_entries` caps the file when you want a hard ceiling
 * a build over 250 000 entries says so in the log
@@ -194,7 +197,6 @@ Four files, all under `/data/adb/duckads`, all editable from the WebUI:
 |---|---|---|
 | `sink` | `0.0.0.0` | `127.0.0.1` if something on the device dislikes the null route |
 | `ipv6_sink` | off | adds a `::` line per domain; doubles the file |
-| `compact` | on | parent-domain suppression; turn off to keep a literal list |
 | `max_entries` | 0 | cap the file on devices where huge hosts files slow lookups |
 | `keep_system_hosts` | on | merges the ROM's own entries back in on every build |
 | `update_schedule` | weekly | `off`, `daily`, `weekly`, `monthly`, `custom` cron |
