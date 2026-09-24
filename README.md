@@ -148,9 +148,15 @@ Measure it on your own device:
 duckads --bench
 ```
 
-It times a lookup of the first blocked name in the file against the last one. The difference is
-what your list length costs per lookup — everything else in that number is your device, not
-DuckAds. The WebUI has the same thing behind **Measure lookup cost** on the Status tab.
+It times a lookup of the first blocked name in the file against the last one, and — this is the
+part that matters — it also times the *same* name twice to establish its own noise floor. If the
+first-vs-last difference is smaller than that floor, it says so instead of reporting a number it
+cannot stand behind. On an OP15 with 6 000 and with 76 000 entries alike, the difference came out
+below the floor: the file length was not measurable end to end. The WebUI has the same thing
+behind **Measure lookup cost** on the Status tab.
+
+Treat the reported scan time as an upper bound — it is an `awk` pass over the file, and the
+resolver's C parser is faster.
 
 **Throughput.** The DNS-bypass chains are entered only for *new connections* on the DNS ports:
 

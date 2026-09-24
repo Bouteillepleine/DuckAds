@@ -51,3 +51,8 @@
 
 - the lookup benchmark takes the minimum of 14 samples instead of a mean, so ping's own fork cost cancels out instead of drowning the signal (a 76k-entry file measures a steady 3.9ms, not a noisy 0-10ms)
 - the RRO filter also catches auto_generated_characteristics_rro, .rro.oneplus and .overlay.target, which the suffix-only match let through
+
+## v1.0.7
+
+- the lookup benchmark now calibrates its own noise floor by timing the same name twice, and refuses to report a figure below it. The 3.9ms and 12.1ms it reported before were per-name variance, not scan cost - a control run showed the middle and last entries of the file timing identically
+- the scan time is labelled as the upper bound it is (an awk pass, where the resolver uses C)

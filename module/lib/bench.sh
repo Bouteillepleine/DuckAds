@@ -1,25 +1,9 @@
-dk_now_ms() {
+dk_now_us() {
     _n=$(date +%s%N 2>/dev/null)
     case "$_n" in
         ''|*[!0-9]*) echo "" ; return 1 ;;
     esac
-    echo $((_n / 1000000))
-}
-
-dk_bench_file() {
-    _f=$1
-    [ -r "$_f" ] || return 1
-    cat "$_f" > /dev/null 2>&1
-    _b0=$(dk_now_ms) || return 1
-    awk 'END { }' /dev/null > /dev/null 2>&1
-    _b1=$(dk_now_ms) || return 1
-    _base=$((_b1 - _b0))
-    _t0=$(dk_now_ms) || return 1
-    awk 'END { }' "$_f" > /dev/null 2>&1
-    _t1=$(dk_now_ms) || return 1
-    _ms=$(((_t1 - _t0) - _base))
-    [ "$_ms" -lt 0 ] && _ms=0
-    echo "$_ms"
+    echo $((_n / 1000))
 }
 
 dk_is_num() {
@@ -37,17 +21,25 @@ dk_fmt_cms() {
     echo "$_w.$_fr"
 }
 
-dk_now_us() {
-    _n=$(date +%s%N 2>/dev/null)
-    case "$_n" in
-        ''|*[!0-9]*) echo "" ; return 1 ;;
-    esac
-    echo $((_n / 1000))
+dk_bench_scan() {
+    _f=$1
+    [ -r "$_f" ] || return 1
+    cat "$_f" > /dev/null 2>&1
+    _b0=$(dk_now_us) || return 1
+    awk 'END { }' /dev/null > /dev/null 2>&1
+    _b1=$(dk_now_us) || return 1
+    _base=$((_b1 - _b0))
+    _t0=$(dk_now_us) || return 1
+    awk 'END { }' "$_f" > /dev/null 2>&1
+    _t1=$(dk_now_us) || return 1
+    _ms=$(((_t1 - _t0 - _base) / 1000))
+    [ "$_ms" -lt 0 ] && _ms=0
+    echo "$_ms"
 }
 
 dk_bench_lookup() {
     _name=$1
-    _runs=${2:-14}
+    _runs=${2:-12}
     dk_have ping || return 1
     ping -c 1 -w 1 "$_name" > /dev/null 2>&1
     _min=-1
@@ -74,7 +66,7 @@ dk_bench() {
     _lines=$(wc -l < "$_f" 2>/dev/null)
     case "$_lines" in ''|*[!0-9]*) _lines=0 ;; esac
 
-    _scan=$(dk_bench_file "$_f")
+    _scan=$(dk_bench_scan "$_f")
     case "$_scan" in ''|*[!0-9]*) _scan=-1 ;; esac
 
     _first=$(grep -m1 "^$sink " "$_f" 2>/dev/null | awk '{ print $2 }')
@@ -83,12 +75,16 @@ dk_bench() {
     _top=-1
     _bottom=-1
     _delta=-1
+    _floor=-1
     if [ -n "$_first" ] && [ -n "$_last" ] && [ "$_first" != "$_last" ]; then
         _a=$(dk_bench_lookup "$_first")
         _b=$(dk_bench_lookup "$_last")
-        if dk_is_num "$_a" && dk_is_num "$_b"; then
+        _c=$(dk_bench_lookup "$_first")
+        if dk_is_num "$_a" && dk_is_num "$_b" && dk_is_num "$_c"; then
             _top=$_a
             _bottom=$_b
+            _floor=$((_a - _c))
+            [ "$_floor" -lt 0 ] && _floor=$((_c - _a))
             _delta=$((_bottom - _top))
             [ "$_delta" -lt 0 ] && _delta=0
         fi
@@ -98,47 +94,46 @@ dk_bench() {
     dk_state_set bench_bytes "$_bytes"
     dk_state_set bench_scan_ms "$_scan"
     dk_state_set bench_top_cms "$_top"
-    dk_state_set bench_bottom_cms "$_bottom"
     dk_state_set bench_delta_cms "$_delta"
+    dk_state_set bench_floor_cms "$_floor"
     dk_state_set bench_when "$(date '+%Y-%m-%d %H:%M')"
 
+    _verdict=$(dk_bench_verdict "$_delta" "$_floor" "$_lines")
+
     if [ "$DK_JSON" = 1 ]; then
-        printf '{"entries":%s,"bytes":%s,"scan_ms":%s,"top_cms":%s,"bottom_cms":%s,"delta_cms":%s,"verdict":"%s"}\n' \
-            "$_lines" "$_bytes" "$_scan" "$_top" "$_bottom" "$_delta" "$(dk_json_str "$(dk_bench_verdict "$_delta" "$_lines")")"
+        printf '{"entries":%s,"bytes":%s,"scan_ms":%s,"top_cms":%s,"delta_cms":%s,"floor_cms":%s,"verdict":"%s"}\n' \
+            "$_lines" "$_bytes" "$_scan" "$_top" "$_delta" "$_floor" "$(dk_json_str "$_verdict")"
         return 0
     fi
 
     dk_log "[+] hosts file: $_lines lines, $((_bytes / 1024)) KB"
-    [ "$_scan" -ge 0 ] && dk_log "    one full pass over the file: ${_scan} ms"
+    [ "$_scan" -ge 0 ] && dk_log "    reading and splitting the whole file: ${_scan} ms (upper bound - the resolver's C parser is faster than awk)"
     if [ "$_delta" -ge 0 ]; then
-        dk_log "    lookup of the first blocked name: $(dk_fmt_cms "$_top") ms"
-        dk_log "    lookup of the last blocked name:  $(dk_fmt_cms "$_bottom") ms"
-        dk_log "    cost of the list length:          $(dk_fmt_cms "$_delta") ms per lookup"
-    else
-        dk_log "    end-to-end lookup timing needs ping and a built hosts file"
+        dk_log "    a blocked name resolves in: $(dk_fmt_cms "$_top") ms, most of which is starting the probe"
+        dk_log "    first entry vs last entry:  $(dk_fmt_cms "$_delta") ms"
+        dk_log "    noise floor of this probe:  $(dk_fmt_cms "$_floor") ms"
     fi
-    dk_log "    $(dk_bench_verdict "$_delta" "$_lines")"
+    dk_log "    $_verdict"
     return 0
 }
 
 dk_bench_verdict() {
     _d=$1
-    _n=$2
-    if [ "$_d" -lt 0 ] 2>/dev/null; then
-        if [ "$_n" -gt 250000 ]; then
-            echo "$_n lines is a lot - if name lookups feel slow, drop a tier or cap the entries"
-            return 0
-        fi
-        echo "nothing measured end to end, but $_n lines is a normal size"
+    _fl=$2
+    _n=$3
+    if [ "$_d" -lt 0 ] 2>/dev/null || [ "$_fl" -lt 0 ] 2>/dev/null; then
+        echo "no end-to-end timing available, and $_n entries is a normal size"
         return 0
     fi
-    if [ "$_d" -lt 100 ]; then
-        echo "under a millisecond per lookup - the list length costs you nothing"
-    elif [ "$_d" -lt 300 ]; then
-        echo "a few milliseconds per lookup - fine in practice"
+    if [ "$_d" -le "$_fl" ]; then
+        echo "the list length costs less than this probe can resolve (under $(dk_fmt_cms "$_fl") ms) - nothing to worry about at $_n entries"
+        return 0
+    fi
+    if [ "$_d" -lt 300 ]; then
+        echo "about $(dk_fmt_cms "$_d") ms per lookup above the noise - fine in practice"
     elif [ "$_d" -lt 1000 ]; then
-        echo "noticeable on pages with many domains - consider a smaller tier or an entry cap"
+        echo "about $(dk_fmt_cms "$_d") ms per lookup - noticeable on pages with many domains"
     else
-        echo "this list is slowing lookups down - drop an aggressive tier or set an entry cap"
+        echo "about $(dk_fmt_cms "$_d") ms per lookup - consider a smaller tier or an entry cap"
     fi
 }
