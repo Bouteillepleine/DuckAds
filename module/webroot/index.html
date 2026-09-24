@@ -89,11 +89,20 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .iconbtn {
-    width: 38px; height: 38px; border-radius: 12px; flex: none; display: grid; place-items: center;
+    width: 44px; height: 44px; border-radius: 14px; flex: none; display: grid; place-items: center;
     background: var(--card); border: 1px solid var(--brd); color: var(--txt); cursor: pointer;
-    font-size: 17px;
+    padding: 0;
   }
   .iconbtn:active { transform: scale(0.92); }
+  .iconbtn svg {
+    width: 23px; height: 23px; display: block;
+    fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .iconbtn .ico-sun { display: block; }
+  .iconbtn .ico-moon { display: none; }
+  html[data-theme="light"] .iconbtn .ico-sun { display: none; }
+  html[data-theme="light"] .iconbtn .ico-moon { display: block; }
+  #refreshbtn.spinning svg { animation: sp 0.9s linear infinite; }
   .card {
     background: var(--card); border: 1px solid var(--brd); border-radius: var(--radius);
     box-shadow: var(--shadow); padding: 16px 16px 17px; margin-bottom: 13px;
@@ -238,8 +247,13 @@
       <h1>DuckAds</h1>
       <p id="subtitle">reading device state…</p>
     </div>
-    <button class="iconbtn" id="themebtn" title="theme">◐</button>
-    <button class="iconbtn" id="refreshbtn" title="refresh">⟳</button>
+    <button class="iconbtn" id="themebtn" title="theme" aria-label="switch theme">
+      <svg class="ico-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
+      <svg class="ico-moon" viewBox="0 0 24 24"><path d="M20.5 14.3A8.5 8.5 0 1 1 9.7 3.5a6.8 6.8 0 0 0 10.8 10.8z"/></svg>
+    </button>
+    <button class="iconbtn" id="refreshbtn" title="refresh" aria-label="refresh">
+      <svg viewBox="0 0 24 24"><path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1"/><path d="M20.8 4.2v5.1h-5.1"/></svg>
+    </button>
   </header>
 
   <div id="nobridge" class="banner" hidden>
@@ -1016,12 +1030,15 @@
       b.onclick = function () { setTab(b.getAttribute("data-tab")); };
     });
     $("refreshbtn").onclick = async function () {
-      var done = busy(this, "");
+      if (this.disabled) return;
+      this.disabled = true;
+      this.classList.add("spinning");
       CATALOG = null;
       APPS = null;
       await refresh();
       await draw();
-      done();
+      this.classList.remove("spinning");
+      this.disabled = false;
       toast("refreshed", "ok");
     };
     await refresh();

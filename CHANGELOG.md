@@ -42,3 +42,7 @@
 - after arming strict mode DuckAds checks that names still resolve, and rolls strict back by itself if they do not
 - All apps leaves out RRO overlays and auto-generated RROs, which are resources rather than apps that resolve names
 - long package names wrap instead of sliding under the toggle
+
+## v1.0.5
+
+- header theme and refresh buttons are SVG icons at a 44px touch target instead of tiny text glyphs, and the refresh icon spins while it works
