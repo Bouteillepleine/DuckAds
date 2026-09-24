@@ -1,0 +1,46 @@
+stevenblack-unified	block	core	StevenBlack unified	1	https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts	The reference hosts list. Ads and trackers, very low breakage.
+stevenblack-fakenews-gambling	block	extended	StevenBlack + fakenews + gambling	0	https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/fakenews-gambling/hosts	Unified plus fake-news and gambling domains.
+hagezi-light	block	core	HaGeZi Light	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/light-onlydomains.txt	Smallest HaGeZi tier. Good first list on slow devices.
+hagezi-multi	block	core	HaGeZi Multi Normal	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/multi-onlydomains.txt	Balanced everyday blocking.
+hagezi-pro	block	extended	HaGeZi Multi Pro	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro-onlydomains.txt	More aggressive. Occasional breakage.
+hagezi-pro-plus	block	extended	HaGeZi Multi Pro++	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro.plus-onlydomains.txt	Aggressive. Expect to whitelist a few domains.
+hagezi-ultimate	block	extended	HaGeZi Ultimate	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/ultimate-onlydomains.txt	Everything HaGeZi has. Breakage is normal here.
+hagezi-popupads	block	extended	HaGeZi Pop-up ads	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/popupads-onlydomains.txt	Pop-up and interstitial ad hosts.
+hagezi-tif	block	security	HaGeZi Threat Intelligence	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/tif-onlydomains.txt	Malware, phishing, scam and cryptojacking domains.
+hagezi-tif-mini	block	security	HaGeZi Threat Intelligence Mini	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/tif.mini-onlydomains.txt	Lighter threat feed for low-memory devices.
+hagezi-doh	block	privacy	HaGeZi DoH bypass	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/doh-onlydomains.txt	Encrypted-DNS endpoints apps use to route around the hosts file.
+hagezi-doh-vpn-proxy	block	privacy	HaGeZi DoH + VPN + proxy bypass	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/doh-vpn-proxy-bypass-onlydomains.txt	Adds VPN and proxy endpoints used to escape DNS filtering.
+hagezi-dyndns	block	privacy	HaGeZi Dynamic DNS	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/dyndns-onlydomains.txt	Dynamic-DNS hosts, a common malware and tracker home.
+hagezi-fake	block	security	HaGeZi Fake stores	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/fake-onlydomains.txt	Fake shops, fake streaming, scam sites.
+hagezi-gambling	block	extended	HaGeZi Gambling	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/gambling-onlydomains.txt	Betting and casino domains.
+hagezi-nsfw	block	nsfw	HaGeZi NSFW	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/nsfw-onlydomains.txt	Adult content.
+hagezi-native-samsung	block	native	Native tracker - Samsung	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/native.samsung-onlydomains.txt	Samsung OEM telemetry.
+hagezi-native-xiaomi	block	native	Native tracker - Xiaomi	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/native.xiaomi-onlydomains.txt	Xiaomi / MIUI telemetry.
+hagezi-native-oppo-realme	block	native	Native tracker - OPPO / Realme	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/native.oppo-realme-onlydomains.txt	ColorOS and Realme UI telemetry, which covers OnePlus on the Oplus stack.
+hagezi-native-vivo	block	native	Native tracker - vivo	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/native.vivo-onlydomains.txt	vivo / Funtouch telemetry.
+hagezi-native-huawei	block	native	Native tracker - Huawei	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/native.huawei-onlydomains.txt	Huawei / EMUI telemetry.
+hagezi-native-amazon	block	native	Native tracker - Amazon	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/native.amazon-onlydomains.txt	Amazon / Fire OS telemetry.
+hagezi-native-apple	block	native	Native tracker - Apple	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/native.apple-onlydomains.txt	Apple telemetry. Useful on a shared network.
+hagezi-native-tiktok	block	native	Native tracker - TikTok	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/native.tiktok-onlydomains.txt	TikTok telemetry. Breaks parts of the app by design.
+hagezi-native-winoffice	block	native	Native tracker - Windows / Office	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/native.winoffice-onlydomains.txt	Windows and Office telemetry for the rest of the network.
+hagezi-native-lgwebos	block	native	Native tracker - LG webOS	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/native.lgwebos-onlydomains.txt	LG TV telemetry.
+hagezi-native-roku	block	native	Native tracker - Roku	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/native.roku-onlydomains.txt	Roku telemetry.
+oisd-small	block	core	OISD Small	0	https://small.oisd.nl/	Curated for near-zero breakage. AdBlock syntax, parsed to domains.
+oisd-big	block	extended	OISD Big	0	https://big.oisd.nl/	Large OISD tier.
+oisd-nsfw	block	nsfw	OISD NSFW	0	https://nsfw.oisd.nl/	Adult content.
+adaway	block	core	AdAway default	0	https://adaway.org/hosts.txt	The classic AdAway list. Small and mobile-focused.
+adguard-dns	block	extended	AdGuard DNS filter	0	https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt	AdBlock-Plus syntax. DuckAds keeps the domain rules and drops the rest.
+1hosts-lite	block	core	1Hosts Lite	0	https://raw.githubusercontent.com/badmojr/1Hosts/master/Lite/hosts.txt	Light everyday tier.
+1hosts-xtra	block	extended	1Hosts Xtra	0	https://raw.githubusercontent.com/badmojr/1Hosts/master/Xtra/hosts.txt	The aggressive 1Hosts tier. Breakage is expected.
+peter-lowe	block	core	Peter Lowe ad servers	0	https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0&mimetype=plaintext	Long-running hand-maintained ad-server list.
+someonewhocares	block	core	someonewhocares.org	0	https://someonewhocares.org/hosts/zero/hosts	Dan Pollock's list.
+notracking	block	privacy	notracking hostnames	0	https://raw.githubusercontent.com/notracking/hosts-blocklists/master/hostnames.txt	Tracker-heavy list.
+frogeye-firstparty	block	privacy	Frogeye first-party trackers	0	https://hostfiles.frogeye.fr/firstparty-trackers-hosts.txt	CNAME-cloaked first-party trackers.
+urlhaus	block	security	URLhaus malware	0	https://urlhaus.abuse.ch/downloads/hostfile/	abuse.ch malware distribution hosts.
+liste-fr	block	regional	Liste FR (EasyList France)	0	https://easylist-downloads.adblockplus.org/liste_fr.txt	French ad list in AdBlock syntax. Domain rules only.
+easylist-germany	block	regional	EasyList Germany	0	https://easylist.to/easylistgermany/easylistgermany.txt	German ad list in AdBlock syntax.
+ruadlist	block	regional	RU AdList	0	https://easylist-downloads.adblockplus.org/advblock.txt	Russian ad list in AdBlock syntax.
+anti-ad	block	regional	anti-AD (China)	0	https://anti-ad.net/easylist.txt	Chinese ad and tracker list.
+hagezi-allow-referral	allow	allow	HaGeZi referral allowlist	1	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/whitelist-referral.txt	Keeps shopping referral and cashback links working.
+hagezi-allow-urlshortener	allow	allow	HaGeZi URL-shortener allowlist	0	https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/whitelist-urlshortener.txt	Keeps link shorteners resolving.
+anudeepnd-allow	allow	allow	AnudeepND optional allowlist	0	https://raw.githubusercontent.com/anudeepND/whitelist/master/domains/optional-list.txt	Commonly over-blocked domains.
