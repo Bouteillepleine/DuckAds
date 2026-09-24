@@ -56,3 +56,8 @@
 
 - the lookup benchmark now calibrates its own noise floor by timing the same name twice, and refuses to report a figure below it. The 3.9ms and 12.1ms it reported before were per-name variance, not scan cost - a control run showed the middle and last entries of the file timing identically
 - the scan time is labelled as the upper bound it is (an awk pass, where the resolver uses C)
+
+## v1.0.8
+
+- secondary text was too dark to read on the dark theme: the faint token sat at 3.5:1 contrast against the card, now 6:1, with the muted token and the light theme raised to match
+- description, hint and note text goes from 11.5px to 12.5px
