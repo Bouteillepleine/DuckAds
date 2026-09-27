@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.13
+
+- WebUI header duck sits bare instead of inside a gradient tile
+- Module, WebUI and WebUI X shortcut icons are now the duck
+
 ## v1.0.12
 
 First public release.

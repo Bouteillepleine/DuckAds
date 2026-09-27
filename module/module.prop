@@ -1,7 +1,7 @@
 id=duckads
 name=DuckAds
-version=v1.0.12
-versionCode=10012
+version=v1.0.13
+versionCode=10013
 author=XxxY
 description=🦆 ready · open the WebUI and hit Update
 updateJson=https://raw.githubusercontent.com/Bouteillepleine/DuckAds/main/update.json
