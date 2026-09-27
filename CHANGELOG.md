@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.14
+
+- Icon leads with a crossed-out AD so the module reads at a glance,
+  with the duck as a corner badge
+
 ## v1.0.13
 
 - WebUI header duck sits bare instead of inside a gradient tile
